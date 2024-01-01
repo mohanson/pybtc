@@ -110,7 +110,8 @@ def address_p2pkh(pubkey: PubKey):
 
 
 def address_p2sh(pubkey: PubKey):
-    # Nested Segwit
+    # Nested Segwit.
+    # See https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki
     pubkey_hash = hash160(pubkey.sec())
     redeem_hash = hash160(bytearray([0x00, 0x14]) + pubkey_hash)
     if btc.config.current == btc.config.mainnet:
@@ -123,8 +124,8 @@ def address_p2sh(pubkey: PubKey):
 
 
 def address_p2wpkh(pubkey: PubKey):
-    # Native SegWit
-    # See https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
+    # Native SegWit.
+    # See https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki
     pubkey_hash = hash160(pubkey.sec())
     if btc.config.current == btc.config.mainnet:
         return btc.bech32.encode('bc', 0, pubkey_hash)
@@ -133,7 +134,8 @@ def address_p2wpkh(pubkey: PubKey):
 
 
 def address_p2tr(pubkey: PubKey):
-    # Taproot
+    # Taproot.
+    # See https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki
     # Taproot requires that the y coordinate of the public key is even.
     assert pubkey.y & 1 == 0
     tweak_k_data = bytearray([
