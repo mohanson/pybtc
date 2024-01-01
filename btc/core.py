@@ -109,16 +109,6 @@ def address_p2pkh(pubkey: PubKey):
     return address
 
 
-def address_p2wpkh(pubkey: PubKey):
-    # Native SegWit
-    # See https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
-    pubkey_hash = hash160(pubkey.sec())
-    if btc.config.current == btc.config.mainnet:
-        return btc.bech32.encode('bc', 0, pubkey_hash)
-    else:
-        return btc.bech32.encode('tb', 0, pubkey_hash)
-
-
 def address_p2sh(pubkey: PubKey):
     # Nested Segwit
     pubkey_hash = hash160(pubkey.sec())
@@ -132,6 +122,31 @@ def address_p2sh(pubkey: PubKey):
     return address
 
 
-def address_p2tr():
+def address_p2wpkh(pubkey: PubKey):
+    # Native SegWit
+    # See https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
+    pubkey_hash = hash160(pubkey.sec())
+    if btc.config.current == btc.config.mainnet:
+        return btc.bech32.encode('bc', 0, pubkey_hash)
+    else:
+        return btc.bech32.encode('tb', 0, pubkey_hash)
+
+
+def address_p2tr(pubkey: PubKey):
     # Taproot
-    pass
+    # Taproot requires that the y coordinate of the public key is even.
+    assert pubkey.y & 1 == 0
+    tweak_k_data = bytearray([
+        0xe8, 0x0f, 0xe1, 0x63, 0x9c, 0x9c, 0xa0, 0x50, 0xe3, 0xaf, 0x1b, 0x39, 0xc1, 0x43, 0xc6, 0x3e,
+        0x42, 0x9c, 0xbc, 0xeb, 0x15, 0xd9, 0x40, 0xfb, 0xb5, 0xc5, 0xa1, 0xf4, 0xaf, 0x57, 0xc5, 0xe9,
+        0xe8, 0x0f, 0xe1, 0x63, 0x9c, 0x9c, 0xa0, 0x50, 0xe3, 0xaf, 0x1b, 0x39, 0xc1, 0x43, 0xc6, 0x3e,
+        0x42, 0x9c, 0xbc, 0xeb, 0x15, 0xd9, 0x40, 0xfb, 0xb5, 0xc5, 0xa1, 0xf4, 0xaf, 0x57, 0xc5, 0xe9
+    ])
+    tweak_k_data.extend(pubkey.sec()[1:])
+    tweak_k = btc.secp256k1.Fr(int.from_bytes(hashlib.sha256(tweak_k_data).digest()))
+    tweak_p = btc.secp256k1.G * tweak_k
+    tweak_p = btc.secp256k1.Pt(btc.secp256k1.Fq(pubkey.x), btc.secp256k1.Fq(pubkey.y)) + tweak_p
+    if btc.config.current == btc.config.mainnet:
+        return btc.bech32.encode('bc', 1, tweak_p.x.x.to_bytes(32))
+    else:
+        return btc.bech32.encode('tb', 1, tweak_p.x.x.to_bytes(32))

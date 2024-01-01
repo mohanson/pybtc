@@ -50,13 +50,6 @@ def test_address_p2pkh():
     assert addr == '1BgGZ9tcN4rm9KBzDn7KprQz87SZ26SAMH'
 
 
-def test_address_p2wpkh():
-    prikey = btc.core.PriKey(1)
-    pubkey = prikey.pubkey()
-    addr = btc.core.address_p2wpkh(pubkey)
-    assert addr == 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4'
-
-
 def test_address_p2sh():
     prikey = btc.core.PriKey(1)
     pubkey = prikey.pubkey()
@@ -64,5 +57,15 @@ def test_address_p2sh():
     assert addr == '3JvL6Ymt8MVWiCNHC7oWU6nLeHNJKLZGLN'
 
 
+def test_address_p2wpkh():
+    prikey = btc.core.PriKey(1)
+    pubkey = prikey.pubkey()
+    addr = btc.core.address_p2wpkh(pubkey)
+    assert addr == 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4'
+
+
 def test_address_p2tr():
-    pass
+    prikey = btc.core.PriKey(1)
+    pubkey = prikey.pubkey()
+    addr = btc.core.address_p2tr(pubkey)
+    assert addr == 'bc1pmfr3p9j00pfxjh0zmgp99y8zftmd3s5pmedqhyptwy6lm87hf5sspknck9'
