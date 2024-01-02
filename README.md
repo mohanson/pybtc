@@ -10,5 +10,5 @@ Features:
 ## Installation
 
 ```sh
-$ python -m pip install pybtc
+$ python -m pip install git+https://github.com/mohanson/pybtc
 ```
