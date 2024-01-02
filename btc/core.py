@@ -136,8 +136,9 @@ def address_p2wpkh(pubkey: PubKey):
 def address_p2tr(pubkey: PubKey):
     # Taproot.
     # See https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki
-    # Taproot requires that the y coordinate of the public key is even.
-    assert pubkey.y & 1 == 0
+    if pubkey.y & 1 != 0:
+        # Taproot requires that the y coordinate of the public key is even.
+        pubkey.y = btc.secp256k1.P - pubkey.y
     tweak_k_data = bytearray([
         0xe8, 0x0f, 0xe1, 0x63, 0x9c, 0x9c, 0xa0, 0x50, 0xe3, 0xaf, 0x1b, 0x39, 0xc1, 0x43, 0xc6, 0x3e,
         0x42, 0x9c, 0xbc, 0xeb, 0x15, 0xd9, 0x40, 0xfb, 0xb5, 0xc5, 0xa1, 0xf4, 0xaf, 0x57, 0xc5, 0xe9,
