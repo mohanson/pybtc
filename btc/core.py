@@ -96,6 +96,8 @@ class PubKey:
                 y = -y % btc.secp256k1.P
         return PubKey(x, y)
 
+# Bitcoin address prefix: https://en.bitcoin.it/wiki/List_of_address_prefixes
+
 
 def address_p2pkh(pubkey: PubKey):
     # Legacy
