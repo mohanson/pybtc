@@ -2,8 +2,8 @@ import btc
 
 
 def test_hash160():
-    pubkey_hash = btc.core.hash160(bytearray([0, 1, 2, 3]))
-    assert pubkey_hash.hex() == '3c3fa3d4adcaf8f52d5b1843975e122548269937'
+    hash = btc.core.hash160(bytearray([0, 1, 2, 3]))
+    assert hash.hex() == '3c3fa3d4adcaf8f52d5b1843975e122548269937'
 
 
 def test_prikey():

@@ -26,6 +26,10 @@ class PriKey:
     def json(self):
         return f'0x{self.n:064x}'
 
+    def pubkey(self):
+        pubkey = btc.secp256k1.G * btc.secp256k1.Fr(self.n)
+        return PubKey(pubkey.x.x, pubkey.y.x)
+
     def wif(self):
         # See https://en.bitcoin.it/wiki/Wallet_import_format
         data = bytearray()
@@ -48,10 +52,6 @@ class PriKey:
             assert data[0] == 0xef
         assert hash256(data[:-4])[:4] == data[-4:]
         return PriKey(int.from_bytes(data[1:33]))
-
-    def pubkey(self):
-        pubkey = btc.secp256k1.G * btc.secp256k1.Fr(self.n)
-        return PubKey(pubkey.x.x, pubkey.y.x)
 
 
 class PubKey:
