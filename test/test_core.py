@@ -14,8 +14,12 @@ def test_prikey():
 
 
 def test_prikey_wif():
+    btc.config.current = btc.config.mainnet
     prikey = btc.core.PriKey(1)
     assert prikey.wif() == 'KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn'
+    assert prikey == btc.core.PriKey.wif_read(prikey.wif())
+    btc.config.current = btc.config.testnet
+    assert prikey.wif() == 'cMahea7zqjxrtgAbB7LSGbcQUr1uX1ojuat9jZodMN87JcbXMTcA'
     assert prikey == btc.core.PriKey.wif_read(prikey.wif())
 
 
@@ -44,28 +48,44 @@ def test_pubkey_sec_read():
 
 
 def test_address_p2pkh():
+    btc.config.current = btc.config.mainnet
     prikey = btc.core.PriKey(1)
     pubkey = prikey.pubkey()
     addr = btc.core.address_p2pkh(pubkey)
     assert addr == '1BgGZ9tcN4rm9KBzDn7KprQz87SZ26SAMH'
+    btc.config.current = btc.config.testnet
+    addr = btc.core.address_p2pkh(pubkey)
+    assert addr == 'mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r'
 
 
 def test_address_p2sh():
+    btc.config.current = btc.config.mainnet
     prikey = btc.core.PriKey(1)
     pubkey = prikey.pubkey()
     addr = btc.core.address_p2sh(pubkey)
     assert addr == '3JvL6Ymt8MVWiCNHC7oWU6nLeHNJKLZGLN'
+    btc.config.current = btc.config.testnet
+    addr = btc.core.address_p2sh(pubkey)
+    assert addr == '2NAUYAHhujozruyzpsFRP63mbrdaU5wnEpN'
 
 
 def test_address_p2wpkh():
+    btc.config.current = btc.config.mainnet
     prikey = btc.core.PriKey(1)
     pubkey = prikey.pubkey()
     addr = btc.core.address_p2wpkh(pubkey)
     assert addr == 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4'
+    btc.config.current = btc.config.testnet
+    addr = btc.core.address_p2wpkh(pubkey)
+    assert addr == 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx'
 
 
 def test_address_p2tr():
+    btc.config.current = btc.config.mainnet
     prikey = btc.core.PriKey(1)
     pubkey = prikey.pubkey()
     addr = btc.core.address_p2tr(pubkey)
     assert addr == 'bc1pmfr3p9j00pfxjh0zmgp99y8zftmd3s5pmedqhyptwy6lm87hf5sspknck9'
+    btc.config.current = btc.config.testnet
+    addr = btc.core.address_p2tr(pubkey)
+    assert addr == 'tb1pmfr3p9j00pfxjh0zmgp99y8zftmd3s5pmedqhyptwy6lm87hf5ssk79hv2'

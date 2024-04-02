@@ -9,8 +9,16 @@ class ObjectDict(dict):
         self[name] = value
 
 
-mainnet = ObjectDict()
+develop = ObjectDict({
+    'name': 'develop',
+})
 
-testnet = ObjectDict()
+mainnet = ObjectDict({
+    'name': 'mainnet',
+})
 
-current = mainnet
+testnet = ObjectDict({
+    'name': 'testnet',
+})
+
+current = testnet
