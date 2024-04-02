@@ -22,7 +22,7 @@ $ python -m pip install . --editable
 Calculate the address from a private key.
 
 ```sh
-$ python example/addr.py 0x0000000000000000000000000000000000000000000000000000000000000001
+$ python example/addr.py --net mainnet --prikey 0x0000000000000000000000000000000000000000000000000000000000000001
 
 # p2pkh  1BgGZ9tcN4rm9KBzDn7KprQz87SZ26SAMH
 # p2sh   3JvL6Ymt8MVWiCNHC7oWU6nLeHNJKLZGLN
