@@ -21,4 +21,4 @@ testnet = ObjectDict({
     'name': 'testnet',
 })
 
-current = testnet
+current = develop
