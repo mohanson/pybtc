@@ -78,12 +78,12 @@ def compress(h0, h1, h2, h3, h4, block):
     x = [int.from_bytes(block[4*i:4*(i+1)], 'little') for i in range(16)]
     # Iterate over the 80 rounds of the compression.
     for j in range(80):
-        rnd = j >> 4
-        # Perform left side of the transformation.
-        al = rol(al + function(bl, cl, dl, rnd) + x[ML[j]] + KL[rnd], RL[j]) + el
+        rn = j >> 4
+        # Perform l side of the transformation.
+        al = rol(al + function(bl, cl, dl, rn) + x[ML[j]] + KL[rn], RL[j]) + el
         al, bl, cl, dl, el = el, al, bl, rol(cl, 10), dl
-        # Perform right side of the transformation.
-        ar = rol(ar + function(br, cr, dr, 4 - rnd) + x[MR[j]] + KR[rnd], RR[j]) + er
+        # Perform r side of the transformation.
+        ar = rol(ar + function(br, cr, dr, 4 - rn) + x[MR[j]] + KR[rn], RR[j]) + er
         ar, br, cr, dr, er = er, ar, br, rol(cr, 10), dr
     # Compose old state, left transform, and right transform into new state.
     return h1 + cl + dr, h2 + dl + er, h3 + el + ar, h4 + al + br, h0 + bl + cr
