@@ -14,4 +14,4 @@ def test_ripemd160():
         (b"1234567890" * 8, "9b752e45573d4b39f4dbd3323cab82bf63326bfb"),
         (b"a" * 1000, "aa69deee9a8922e92f8105e007f76110f381e9cf")
     ]:
-        assert btc.ripemd160.ripemd160(msg).hex() == out
+        assert btc.ripemd160.ripemd160(msg).digest().hex() == out

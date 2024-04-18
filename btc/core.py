@@ -5,7 +5,7 @@ import json
 
 
 def hash160(data: bytearray) -> bytearray:
-    return bytearray(btc.ripemd160.ripemd160(hashlib.sha256(data).digest()))
+    return bytearray(btc.ripemd160.ripemd160(hashlib.sha256(data).digest()).digest())
 
 
 def hash256(data: bytearray):

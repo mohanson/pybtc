@@ -109,18 +109,46 @@ def compress(state: typing.List[int], block: typing.List[int]):
     state[4] = u32(h0 + bl + cr)
 
 
-def ripemd160(data: bytearray) -> bytearray:
-    # Compute the RIPEMD-160 hash of data.
-    # Initialize state.
-    state = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0]
-    # Process full 64-byte blocks in the input.
-    for b in range(len(data) >> 6):
-        compress(state, data[64*b:64*(b+1)])
-    # Construct final blocks (with padding and size).
-    pad = b"\x80" + b"\x00" * ((119 - len(data)) & 63)
-    fin = data[len(data) & ~63:] + pad + (8 * len(data)).to_bytes(8, 'little')
-    # Process final blocks.
-    for b in range(len(fin) >> 6):
-        compress(state, fin[64*b:64*(b+1)])
-    # Produce output.
-    return b"".join(h.to_bytes(4, 'little') for h in state)
+class Ripemd160:
+    # Ripemd160 hasher.
+
+    def __init__(self):
+        self.cache = bytearray()
+        self.count = 0
+        # Initialize state.
+        self.state = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0]
+
+    def update(self, data: bytearray | bytes):
+        self.cache.extend(data)
+        self.count += len(data) * 8
+        for _ in range(1 << 32):
+            if len(self.cache) < 64:
+                break
+            full_block = self.cache[0x00:0x40]
+            self.cache = self.cache[0x40:]
+            # Process full 64-byte blocks in the input.
+            compress(self.state, full_block)
+        return self
+
+    def digest(self) -> bytearray:
+        # Construct final blocks (with padding and size).
+        self.cache.append(0x80)
+        size = len(self.cache)
+        padn = 0x38 if size <= 56 else 0x78
+        self.cache.extend(bytearray(padn - size))
+        self.cache.extend(bytearray(self.count.to_bytes(8, 'little')))
+        # Process final blocks.
+        self.update(bytearray())
+        assert len(self.cache) == 0
+        # Produce output.
+        r = bytearray()
+        for h in self.state:
+            r.extend(bytearray(h.to_bytes(4, 'little')))
+        return r
+
+
+def ripemd160(data: bytearray | bytes = b'') -> Ripemd160:
+    # Returns a ripemd160 hash object; optionally initialized with a string.
+    hash = Ripemd160()
+    hash.update(data)
+    return hash
