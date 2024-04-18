@@ -5,6 +5,8 @@
 # Pure Python RIPEMD160 implementation. Note that this impelentation is not constant time.
 # Original source: https://github.com/bitcoin/bitcoin/pull/23716
 
+import typing
+
 # Message schedule indexes for the l path.
 ML = [
     0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf,
@@ -48,12 +50,12 @@ KL = [0x00000000, 0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xa953fd4e]
 KR = [0x50a28be6, 0x5c4dd124, 0x6d703ef3, 0x7a6d76e9, 0x00000000]
 
 
-def rol(x, i):
+def rol(x: int, i: int) -> int:
     # Rotate the bottom 32 bits of x left by i bits.
     return ((x << i) | ((x & 0xffffffff) >> (32 - i))) & 0xffffffff
 
 
-def function(x, y, z, i):
+def function(x: int, y: int, z: int, i: int) -> int:
     # The f1, f2, f3, f4, and f5 functions from the specification.
     if i == 0:
         return x ^ y ^ z
@@ -68,9 +70,14 @@ def function(x, y, z, i):
     assert False
 
 
-def compress(h0, h1, h2, h3, h4, block):
-    # Compress state (h0, h1, h2, h3, h4) with block."""
+def compress(state: typing.List[int], block: typing.List[int]):
+    # Compress state with block."""
     # L path variables.
+    h0 = state[0]
+    h1 = state[1]
+    h2 = state[2]
+    h3 = state[3]
+    h4 = state[4]
     al, bl, cl, dl, el = h0, h1, h2, h3, h4
     # R path variables.
     ar, br, cr, dr, er = h0, h1, h2, h3, h4
@@ -86,21 +93,25 @@ def compress(h0, h1, h2, h3, h4, block):
         ar = rol(ar + function(br, cr, dr, 4 - rn) + x[MR[j]] + KR[rn], RR[j]) + er
         ar, br, cr, dr, er = er, ar, br, rol(cr, 10), dr
     # Compose old state, left transform, and right transform into new state.
-    return h1 + cl + dr, h2 + dl + er, h3 + el + ar, h4 + al + br, h0 + bl + cr
+    state[0] = h1 + cl + dr
+    state[1] = h2 + dl + er
+    state[2] = h3 + el + ar
+    state[3] = h4 + al + br
+    state[4] = h0 + bl + cr
 
 
-def ripemd160(data):
+def ripemd160(data: bytearray) -> bytearray:
     # Compute the RIPEMD-160 hash of data.
     # Initialize state.
-    state = (0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0)
+    state = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0]
     # Process full 64-byte blocks in the input.
     for b in range(len(data) >> 6):
-        state = compress(*state, data[64*b:64*(b+1)])
+        compress(state, data[64*b:64*(b+1)])
     # Construct final blocks (with padding and size).
     pad = b"\x80" + b"\x00" * ((119 - len(data)) & 63)
     fin = data[len(data) & ~63:] + pad + (8 * len(data)).to_bytes(8, 'little')
     # Process final blocks.
     for b in range(len(fin) >> 6):
-        state = compress(*state, fin[64*b:64*(b+1)])
+        compress(state, fin[64*b:64*(b+1)])
     # Produce output.
     return b"".join((h & 0xffffffff).to_bytes(4, 'little') for h in state)
