@@ -1,110 +1,154 @@
 # Copyright (c) 2021 Pieter Wuille
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
-"""
-Pure Python RIPEMD160 implementation. Note that this impelentation is not constant time.
-Original source: https://github.com/bitcoin/bitcoin/pull/23716
-"""
+#
+# Pure Python RIPEMD160 implementation. Note that this impelentation is not constant time.
+# Original source: https://github.com/bitcoin/bitcoin/pull/23716
 
-# Message schedule indexes for the left path.
+import typing
+
+# Message schedule indexes for the l path.
 ML = [
-    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-    7, 4, 13, 1, 10, 6, 15, 3, 12, 0, 9, 5, 2, 14, 11, 8,
-    3, 10, 14, 4, 9, 15, 8, 1, 2, 7, 0, 6, 13, 11, 5, 12,
-    1, 9, 11, 10, 0, 8, 12, 4, 13, 3, 7, 15, 14, 5, 6, 2,
-    4, 0, 5, 9, 7, 12, 2, 10, 14, 1, 3, 8, 11, 6, 15, 13
+    0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf,
+    0x7, 0x4, 0xd, 0x1, 0xa, 0x6, 0xf, 0x3, 0xc, 0x0, 0x9, 0x5, 0x2, 0xe, 0xb, 0x8,
+    0x3, 0xa, 0xe, 0x4, 0x9, 0xf, 0x8, 0x1, 0x2, 0x7, 0x0, 0x6, 0xd, 0xb, 0x5, 0xc,
+    0x1, 0x9, 0xb, 0xa, 0x0, 0x8, 0xc, 0x4, 0xd, 0x3, 0x7, 0xf, 0xe, 0x5, 0x6, 0x2,
+    0x4, 0x0, 0x5, 0x9, 0x7, 0xc, 0x2, 0xa, 0xe, 0x1, 0x3, 0x8, 0xb, 0x6, 0xf, 0xd,
 ]
 
-# Message schedule indexes for the right path.
+# Message schedule indexes for the r path.
 MR = [
-    5, 14, 7, 0, 9, 2, 11, 4, 13, 6, 15, 8, 1, 10, 3, 12,
-    6, 11, 3, 7, 0, 13, 5, 10, 14, 15, 8, 12, 4, 9, 1, 2,
-    15, 5, 1, 3, 7, 14, 6, 9, 11, 8, 12, 2, 10, 0, 4, 13,
-    8, 6, 4, 1, 3, 11, 15, 0, 5, 12, 2, 13, 9, 7, 10, 14,
-    12, 15, 10, 4, 1, 5, 8, 7, 6, 2, 13, 14, 0, 3, 9, 11
+    0x5, 0xe, 0x7, 0x0, 0x9, 0x2, 0xb, 0x4, 0xd, 0x6, 0xf, 0x8, 0x1, 0xa, 0x3, 0xc,
+    0x6, 0xb, 0x3, 0x7, 0x0, 0xd, 0x5, 0xa, 0xe, 0xf, 0x8, 0xc, 0x4, 0x9, 0x1, 0x2,
+    0xf, 0x5, 0x1, 0x3, 0x7, 0xe, 0x6, 0x9, 0xb, 0x8, 0xc, 0x2, 0xa, 0x0, 0x4, 0xd,
+    0x8, 0x6, 0x4, 0x1, 0x3, 0xb, 0xf, 0x0, 0x5, 0xc, 0x2, 0xd, 0x9, 0x7, 0xa, 0xe,
+    0xc, 0xf, 0xa, 0x4, 0x1, 0x5, 0x8, 0x7, 0x6, 0x2, 0xd, 0xe, 0x0, 0x3, 0x9, 0xb,
 ]
 
-# Rotation counts for the left path.
+# Rotation counts for the l path.
 RL = [
-    11, 14, 15, 12, 5, 8, 7, 9, 11, 13, 14, 15, 6, 7, 9, 8,
-    7, 6, 8, 13, 11, 9, 7, 15, 7, 12, 15, 9, 11, 7, 13, 12,
-    11, 13, 6, 7, 14, 9, 13, 15, 14, 8, 13, 6, 5, 12, 7, 5,
-    11, 12, 14, 15, 14, 15, 9, 8, 9, 14, 5, 6, 8, 6, 5, 12,
-    9, 15, 5, 11, 6, 8, 13, 12, 5, 12, 13, 14, 11, 8, 5, 6
+    0xb, 0xe, 0xf, 0xc, 0x5, 0x8, 0x7, 0x9, 0xb, 0xd, 0xe, 0xf, 0x6, 0x7, 0x9, 0x8,
+    0x7, 0x6, 0x8, 0xd, 0xb, 0x9, 0x7, 0xf, 0x7, 0xc, 0xf, 0x9, 0xb, 0x7, 0xd, 0xc,
+    0xb, 0xd, 0x6, 0x7, 0xe, 0x9, 0xd, 0xf, 0xe, 0x8, 0xd, 0x6, 0x5, 0xc, 0x7, 0x5,
+    0xb, 0xc, 0xe, 0xf, 0xe, 0xf, 0x9, 0x8, 0x9, 0xe, 0x5, 0x6, 0x8, 0x6, 0x5, 0xc,
+    0x9, 0xf, 0x5, 0xb, 0x6, 0x8, 0xd, 0xc, 0x5, 0xc, 0xd, 0xe, 0xb, 0x8, 0x5, 0x6,
 ]
 
-# Rotation counts for the right path.
+# Rotation counts for the r path.
 RR = [
-    8, 9, 9, 11, 13, 15, 15, 5, 7, 7, 8, 11, 14, 14, 12, 6,
-    9, 13, 15, 7, 12, 8, 9, 11, 7, 7, 12, 7, 6, 15, 13, 11,
-    9, 7, 15, 11, 8, 6, 6, 14, 12, 13, 5, 14, 13, 13, 7, 5,
-    15, 5, 8, 11, 14, 14, 6, 14, 6, 9, 12, 9, 12, 5, 15, 8,
-    8, 5, 12, 9, 12, 5, 14, 6, 8, 13, 6, 5, 15, 13, 11, 11
+    0x8, 0x9, 0x9, 0xb, 0xd, 0xf, 0xf, 0x5, 0x7, 0x7, 0x8, 0xb, 0xe, 0xe, 0xc, 0x6,
+    0x9, 0xd, 0xf, 0x7, 0xc, 0x8, 0x9, 0xb, 0x7, 0x7, 0xc, 0x7, 0x6, 0xf, 0xd, 0xb,
+    0x9, 0x7, 0xf, 0xb, 0x8, 0x6, 0x6, 0xe, 0xc, 0xd, 0x5, 0xe, 0xd, 0xd, 0x7, 0x5,
+    0xf, 0x5, 0x8, 0xb, 0xe, 0xe, 0x6, 0xe, 0x6, 0x9, 0xc, 0x9, 0xc, 0x5, 0xf, 0x8,
+    0x8, 0x5, 0xc, 0x9, 0xc, 0x5, 0xe, 0x6, 0x8, 0xd, 0x6, 0x5, 0xf, 0xd, 0xb, 0xb,
 ]
 
-# K constants for the left path.
-KL = [0, 0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xa953fd4e]
+# K constants for the l path.
+KL = [0x00000000, 0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xa953fd4e]
 
-# K constants for the right path.
-KR = [0x50a28be6, 0x5c4dd124, 0x6d703ef3, 0x7a6d76e9, 0]
+# K constants for the r path.
+KR = [0x50a28be6, 0x5c4dd124, 0x6d703ef3, 0x7a6d76e9, 0x00000000]
 
 
-def fi(x, y, z, i):
-    """The f1, f2, f3, f4, and f5 functions from the specification."""
+def rol(x: int, i: int) -> int:
+    # Rotate the bottom 32 bits of x left by i bits.
+    assert x <= 0xffffffff
+    assert i <= 32
+    return u32((x << i) | (x >> (32 - i)))
+
+
+def u32(x: int) -> int:
+    return x & 0xffffffff
+
+
+def function(x: int, y: int, z: int, i: int) -> int:
+    # The f1, f2, f3, f4, and f5 functions from the specification.
+    assert x <= 0xffffffff
+    assert y <= 0xffffffff
+    assert z <= 0xffffffff
+    assert i <= 4
     if i == 0:
         return x ^ y ^ z
-    elif i == 1:
+    if i == 1:
         return (x & y) | (~x & z)
-    elif i == 2:
+    if i == 2:
         return (x | ~y) ^ z
-    elif i == 3:
+    if i == 3:
         return (x & z) | (y & ~z)
-    elif i == 4:
+    if i == 4:
         return x ^ (y | ~z)
-    else:
-        assert False
 
 
-def rol(x, i):
-    """Rotate the bottom 32 bits of x left by i bits."""
-    return ((x << i) | ((x & 0xffffffff) >> (32 - i))) & 0xffffffff
-
-
-def compress(h0, h1, h2, h3, h4, block):
-    """Compress state (h0, h1, h2, h3, h4) with block."""
-    # Left path variables.
+def compress(state: typing.List[int], block: typing.List[int]):
+    # Compress state with block."""
+    # L path variables.
+    h0 = state[0]
+    h1 = state[1]
+    h2 = state[2]
+    h3 = state[3]
+    h4 = state[4]
     al, bl, cl, dl, el = h0, h1, h2, h3, h4
-    # Right path variables.
+    # R path variables.
     ar, br, cr, dr, er = h0, h1, h2, h3, h4
     # Message variables.
     x = [int.from_bytes(block[4*i:4*(i+1)], 'little') for i in range(16)]
-
     # Iterate over the 80 rounds of the compression.
     for j in range(80):
-        rnd = j >> 4
-        # Perform left side of the transformation.
-        al = rol(al + fi(bl, cl, dl, rnd) + x[ML[j]] + KL[rnd], RL[j]) + el
+        rn = j >> 4
+        # Perform l side of the transformation.
+        al = u32(rol(u32(al + function(bl, cl, dl, 0 + rn) + x[ML[j]] + KL[rn]), RL[j]) + el)
         al, bl, cl, dl, el = el, al, bl, rol(cl, 10), dl
-        # Perform right side of the transformation.
-        ar = rol(ar + fi(br, cr, dr, 4 - rnd) + x[MR[j]] + KR[rnd], RR[j]) + er
+        # Perform r side of the transformation.
+        ar = u32(rol(u32(ar + function(br, cr, dr, 4 - rn) + x[MR[j]] + KR[rn]), RR[j]) + er)
         ar, br, cr, dr, er = er, ar, br, rol(cr, 10), dr
-
     # Compose old state, left transform, and right transform into new state.
-    return h1 + cl + dr, h2 + dl + er, h3 + el + ar, h4 + al + br, h0 + bl + cr
+    state[0] = u32(h1 + cl + dr)
+    state[1] = u32(h2 + dl + er)
+    state[2] = u32(h3 + el + ar)
+    state[3] = u32(h4 + al + br)
+    state[4] = u32(h0 + bl + cr)
 
 
-def ripemd160(data):
-    """Compute the RIPEMD-160 hash of data."""
-    # Initialize state.
-    state = (0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0)
-    # Process full 64-byte blocks in the input.
-    for b in range(len(data) >> 6):
-        state = compress(*state, data[64*b:64*(b+1)])
-    # Construct final blocks (with padding and size).
-    pad = b"\x80" + b"\x00" * ((119 - len(data)) & 63)
-    fin = data[len(data) & ~63:] + pad + (8 * len(data)).to_bytes(8, 'little')
-    # Process final blocks.
-    for b in range(len(fin) >> 6):
-        state = compress(*state, fin[64*b:64*(b+1)])
-    # Produce output.
-    return b"".join((h & 0xffffffff).to_bytes(4, 'little') for h in state)
+class Ripemd160:
+    # Ripemd160 hasher.
+
+    def __init__(self):
+        self.cache = bytearray()
+        self.count = 0
+        # Initialize state.
+        self.state = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0]
+
+    def update(self, data: bytearray | bytes):
+        self.cache.extend(data)
+        self.count += len(data) * 8
+        for _ in range(1 << 32):
+            if len(self.cache) < 64:
+                break
+            full_block = self.cache[0x00:0x40]
+            self.cache = self.cache[0x40:]
+            # Process full 64-byte blocks in the input.
+            compress(self.state, full_block)
+        return self
+
+    def digest(self) -> bytearray:
+        # Construct final blocks (with padding and size).
+        self.cache.append(0x80)
+        size = len(self.cache)
+        padn = 0x38 if size <= 56 else 0x78
+        self.cache.extend(bytearray(padn - size))
+        self.cache.extend(bytearray(self.count.to_bytes(8, 'little')))
+        # Process final blocks.
+        self.update(bytearray())
+        assert len(self.cache) == 0
+        # Produce output.
+        r = bytearray()
+        for h in self.state:
+            r.extend(bytearray(h.to_bytes(4, 'little')))
+        return r
+
+
+def ripemd160(data: bytearray | bytes = b'') -> Ripemd160:
+    # Returns a ripemd160 hash object; optionally initialized with a string.
+    hash = Ripemd160()
+    hash.update(data)
+    return hash

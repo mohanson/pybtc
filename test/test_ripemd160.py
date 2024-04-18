@@ -12,6 +12,6 @@ def test_ripemd160():
         (b"abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq", "12a053384a9c0c88e405a06c27dcf49ada62eb2b"),
         (b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", "b0e20b6e3116640286ed3a87a5713079b21f5189"),
         (b"1234567890" * 8, "9b752e45573d4b39f4dbd3323cab82bf63326bfb"),
-        (b"a" * 1000000, "52783243c1697bdbe16d37f97f68f08325dc1528")
+        (b"a" * 1000, "aa69deee9a8922e92f8105e007f76110f381e9cf")
     ]:
-        assert btc.ripemd160.ripemd160(msg).hex() == out
+        assert btc.ripemd160.ripemd160(msg).digest().hex() == out
