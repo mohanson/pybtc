@@ -80,7 +80,7 @@ def compress(h0, h1, h2, h3, h4, block):
     for j in range(80):
         rn = j >> 4
         # Perform l side of the transformation.
-        al = rol(al + function(bl, cl, dl, rn) + x[ML[j]] + KL[rn], RL[j]) + el
+        al = rol(al + function(bl, cl, dl, 0 + rn) + x[ML[j]] + KL[rn], RL[j]) + el
         al, bl, cl, dl, el = el, al, bl, rol(cl, 10), dl
         # Perform r side of the transformation.
         ar = rol(ar + function(br, cr, dr, 4 - rn) + x[MR[j]] + KR[rn], RR[j]) + er
