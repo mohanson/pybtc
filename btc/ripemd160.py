@@ -52,11 +52,21 @@ KR = [0x50a28be6, 0x5c4dd124, 0x6d703ef3, 0x7a6d76e9, 0x00000000]
 
 def rol(x: int, i: int) -> int:
     # Rotate the bottom 32 bits of x left by i bits.
-    return ((x << i) | ((x & 0xffffffff) >> (32 - i))) & 0xffffffff
+    assert x <= 0xffffffff
+    assert i <= 32
+    return u32((x << i) | (x >> (32 - i)))
+
+
+def u32(x: int) -> int:
+    return x & 0xffffffff
 
 
 def function(x: int, y: int, z: int, i: int) -> int:
     # The f1, f2, f3, f4, and f5 functions from the specification.
+    assert x <= 0xffffffff
+    assert y <= 0xffffffff
+    assert z <= 0xffffffff
+    assert i <= 4
     if i == 0:
         return x ^ y ^ z
     if i == 1:
@@ -67,7 +77,6 @@ def function(x: int, y: int, z: int, i: int) -> int:
         return (x & z) | (y & ~z)
     if i == 4:
         return x ^ (y | ~z)
-    assert False
 
 
 def compress(state: typing.List[int], block: typing.List[int]):
@@ -87,17 +96,17 @@ def compress(state: typing.List[int], block: typing.List[int]):
     for j in range(80):
         rn = j >> 4
         # Perform l side of the transformation.
-        al = rol(al + function(bl, cl, dl, 0 + rn) + x[ML[j]] + KL[rn], RL[j]) + el
+        al = u32(rol(u32(al + function(bl, cl, dl, 0 + rn) + x[ML[j]] + KL[rn]), RL[j]) + el)
         al, bl, cl, dl, el = el, al, bl, rol(cl, 10), dl
         # Perform r side of the transformation.
-        ar = rol(ar + function(br, cr, dr, 4 - rn) + x[MR[j]] + KR[rn], RR[j]) + er
+        ar = u32(rol(u32(ar + function(br, cr, dr, 4 - rn) + x[MR[j]] + KR[rn]), RR[j]) + er)
         ar, br, cr, dr, er = er, ar, br, rol(cr, 10), dr
     # Compose old state, left transform, and right transform into new state.
-    state[0] = h1 + cl + dr
-    state[1] = h2 + dl + er
-    state[2] = h3 + el + ar
-    state[3] = h4 + al + br
-    state[4] = h0 + bl + cr
+    state[0] = u32(h1 + cl + dr)
+    state[1] = u32(h2 + dl + er)
+    state[2] = u32(h3 + el + ar)
+    state[3] = u32(h4 + al + br)
+    state[4] = u32(h0 + bl + cr)
 
 
 def ripemd160(data: bytearray) -> bytearray:
@@ -114,4 +123,4 @@ def ripemd160(data: bytearray) -> bytearray:
     for b in range(len(fin) >> 6):
         compress(state, fin[64*b:64*(b+1)])
     # Produce output.
-    return b"".join((h & 0xffffffff).to_bytes(4, 'little') for h in state)
+    return b"".join(h.to_bytes(4, 'little') for h in state)
