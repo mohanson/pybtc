@@ -48,25 +48,24 @@ KL = [0x00000000, 0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xa953fd4e]
 KR = [0x50a28be6, 0x5c4dd124, 0x6d703ef3, 0x7a6d76e9, 0x00000000]
 
 
-def fi(x, y, z, i):
-    # The f1, f2, f3, f4, and f5 functions from the specification.
-    if i == 0:
-        return x ^ y ^ z
-    elif i == 1:
-        return (x & y) | (~x & z)
-    elif i == 2:
-        return (x | ~y) ^ z
-    elif i == 3:
-        return (x & z) | (y & ~z)
-    elif i == 4:
-        return x ^ (y | ~z)
-    else:
-        assert False
-
-
 def rol(x, i):
     # Rotate the bottom 32 bits of x left by i bits.
     return ((x << i) | ((x & 0xffffffff) >> (32 - i))) & 0xffffffff
+
+
+def function(x, y, z, i):
+    # The f1, f2, f3, f4, and f5 functions from the specification.
+    if i == 0:
+        return x ^ y ^ z
+    if i == 1:
+        return (x & y) | (~x & z)
+    if i == 2:
+        return (x | ~y) ^ z
+    if i == 3:
+        return (x & z) | (y & ~z)
+    if i == 4:
+        return x ^ (y | ~z)
+    assert False
 
 
 def compress(h0, h1, h2, h3, h4, block):
@@ -81,10 +80,10 @@ def compress(h0, h1, h2, h3, h4, block):
     for j in range(80):
         rnd = j >> 4
         # Perform left side of the transformation.
-        al = rol(al + fi(bl, cl, dl, rnd) + x[ML[j]] + KL[rnd], RL[j]) + el
+        al = rol(al + function(bl, cl, dl, rnd) + x[ML[j]] + KL[rnd], RL[j]) + el
         al, bl, cl, dl, el = el, al, bl, rol(cl, 10), dl
         # Perform right side of the transformation.
-        ar = rol(ar + fi(br, cr, dr, 4 - rnd) + x[MR[j]] + KR[rnd], RR[j]) + er
+        ar = rol(ar + function(br, cr, dr, 4 - rnd) + x[MR[j]] + KR[rnd], RR[j]) + er
         ar, br, cr, dr, er = er, ar, br, rol(cr, 10), dr
     # Compose old state, left transform, and right transform into new state.
     return h1 + cl + dr, h2 + dl + er, h3 + el + ar, h4 + al + br, h0 + bl + cr
