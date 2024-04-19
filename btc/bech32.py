@@ -34,7 +34,7 @@ class Encoding(Enum):
     BECH32M = 2
 
 
-CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
+CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l'
 BECH32M_CONST = 0x2bc830a3
 
 

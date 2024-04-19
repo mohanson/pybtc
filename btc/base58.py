@@ -10,27 +10,22 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE file.
 
-"""Base58 encoding and decoding"""
-
-
-import binascii
+# Base58 encoding and decoding
 
 B58_DIGITS = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
 
-def encode(b):
-    """Encode bytes to a base58-encoded string"""
-
+def encode(b: bytearray) -> str:
+    # Encode bytes to a base58-encoded string
+    assert isinstance(b, bytearray)
     # Convert big-endian bytes to integer
-    n = int('0x0' + binascii.hexlify(b).decode('utf8'), 16)
-
+    n = int.from_bytes(b)
     # Divide that integer into bas58
     res = []
     while n > 0:
         n, r = divmod(n, 58)
         res.append(B58_DIGITS[r])
     res = ''.join(res[::-1])
-
     # Encode leading zeros as base58 zeros
     czero = 0
     pad = 0
@@ -42,11 +37,10 @@ def encode(b):
     return B58_DIGITS[0] * pad + res
 
 
-def decode(s):
-    """Decode a base58-encoding string, returning bytes"""
+def decode(s: str) -> bytearray:
+    # Decode a base58-encoding string, returning bytes.
     if not s:
-        return b''
-
+        return bytearray()
     # Convert the string to an integer
     n = 0
     for c in s:
@@ -54,13 +48,8 @@ def decode(s):
         assert c in B58_DIGITS
         digit = B58_DIGITS.index(c)
         n += digit
-
     # Convert the integer to bytes
-    h = '%x' % n
-    if len(h) % 2:
-        h = '0' + h
-    res = binascii.unhexlify(h.encode('utf8'))
-
+    res = bytearray(n.to_bytes((n.bit_length() + 7) // 8))
     # Add padding back.
     pad = 0
     for c in s[:-1]:
@@ -68,4 +57,4 @@ def decode(s):
             pad += 1
         else:
             break
-    return b'\x00' * pad + res
+    return bytearray(pad) + res
