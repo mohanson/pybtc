@@ -152,6 +152,6 @@ def address_p2tr(pubkey: PubKey):
     tweak_p = btc.secp256k1.G * tweak_k
     tweak_p = btc.secp256k1.Pt(btc.secp256k1.Fq(pubkey.x), btc.secp256k1.Fq(pubkey.y)) + tweak_p
     if btc.config.current == btc.config.mainnet:
-        return btc.bech32.encode('bc', 1, tweak_p.x.x.to_bytes(32))
+        return btc.bech32m.encode('bc', 1, bytearray(tweak_p.x.x.to_bytes(32)))
     else:
-        return btc.bech32.encode('tb', 1, tweak_p.x.x.to_bytes(32))
+        return btc.bech32m.encode('tb', 1, bytearray(tweak_p.x.x.to_bytes(32)))

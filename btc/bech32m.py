@@ -22,15 +22,15 @@
 # BIP-0350 https://github.com/bitcoin/bips/blob/master/bip-0350.mediawiki
 # Derived from https://raw.githubusercontent.com/sipa/bech32/master/ref/python/segwit_addr.py
 #
-# Reference implementation for Bech32/bech32 and segwit addresses.
+# Reference implementation for Bech32/Bech32m and segwit addresses.
 
 import typing
 
 CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l'
-CONST = 1
+CONST = 0x2bc830a3
 
 
-def bech32_polymod(data: bytearray) -> int:
+def bech32m_polymod(data: bytearray) -> int:
     # Internal function that computes the Bech32 checksum.
     assert isinstance(data, bytearray)
     gen = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3]
@@ -44,7 +44,7 @@ def bech32_polymod(data: bytearray) -> int:
     return chk
 
 
-def bech32_hrp_expand(hrp: str) -> bytearray:
+def bech32m_hrp_expand(hrp: str) -> bytearray:
     # Expand the HRP into values for checksum computation.
     r = bytearray()
     r.extend([ord(x) >> 5 for x in hrp])
@@ -53,28 +53,28 @@ def bech32_hrp_expand(hrp: str) -> bytearray:
     return r
 
 
-def bech32_verify_checksum(hrp: str, data: bytearray) -> bool:
+def bech32m_verify_checksum(hrp: str, data: bytearray) -> bool:
     # Verify a checksum given HRP and converted data characters.
     assert isinstance(data, bytearray)
-    return bech32_polymod(bech32_hrp_expand(hrp) + bytearray(data)) == CONST
+    return bech32m_polymod(bech32m_hrp_expand(hrp) + bytearray(data)) == CONST
 
 
-def bech32_create_checksum(hrp: str, data: bytearray) -> bytearray:
+def bech32m_create_checksum(hrp: str, data: bytearray) -> bytearray:
     # Compute the checksum values given HRP and data.
     assert isinstance(data, bytearray)
-    data = bech32_hrp_expand(hrp) + data
-    pmod = bech32_polymod(data + bytearray(6)) ^ CONST
+    data = bech32m_hrp_expand(hrp) + data
+    pmod = bech32m_polymod(data + bytearray(6)) ^ CONST
     return bytearray([(pmod >> 5 * (5 - i)) & 31 for i in range(6)])
 
 
-def bech32_encode(hrp: str, data: bytearray) -> str:
+def bech32m_encode(hrp: str, data: bytearray) -> str:
     # Compute a Bech32 string given HRP and data values.
     assert isinstance(data, bytearray)
-    data = data + bech32_create_checksum(hrp, data)
+    data = data + bech32m_create_checksum(hrp, data)
     return hrp + '1' + ''.join([CHARSET[d] for d in data])
 
 
-def bech32_decode(bech: str) -> typing.Tuple[str, bytearray]:
+def bech32m_decode(bech: str) -> typing.Tuple[str, bytearray]:
     # Validate a string, and determine HRP and data.
     assert len(bech) <= 90
     for c in bech:
@@ -88,11 +88,11 @@ def bech32_decode(bech: str) -> typing.Tuple[str, bytearray]:
         assert c in CHARSET
     hrp = bech[:pos]
     data = bytearray([CHARSET.find(x) for x in bech[pos+1:]])
-    assert bech32_verify_checksum(hrp, data)
+    assert bech32m_verify_checksum(hrp, data)
     return hrp, data[:-6]
 
 
-def bech32_re_arrange_5(data: bytearray) -> bytearray:
+def bech32m_re_arrange_5(data: bytearray) -> bytearray:
     # Re-arrange those bits into groups of 5, and pad with zeroes at the end if needed.
     assert isinstance(data, bytearray)
     acc = 0
@@ -112,7 +112,7 @@ def bech32_re_arrange_5(data: bytearray) -> bytearray:
     return ret
 
 
-def bech32_re_arrange_8(data: bytearray) -> bytearray:
+def bech32m_re_arrange_8(data: bytearray) -> bytearray:
     # Re-arrange those bits into groups of 8 bits. Any incomplete group at the end MUST be 4 bits or less, MUST be all
     # zeroes, and is discarded.
     assert isinstance(data, bytearray)
@@ -134,18 +134,18 @@ def bech32_re_arrange_8(data: bytearray) -> bytearray:
 
 def decode(hrp: str, addr: str) -> typing.Tuple[int, bytearray]:
     # Decode a segwit address.
-    hrq, data = bech32_decode(addr)
+    hrq, data = bech32m_decode(addr)
     assert hrq == hrp
     ver = data[0]
-    assert ver == 0
-    return ver, bech32_re_arrange_8(data[1:])
+    assert ver >= 1
+    return ver, bech32m_re_arrange_8(data[1:])
 
 
 def encode(hrp: str, ver: int, prog: bytearray) -> str:
     # Encode a segwit address.
-    assert ver == 0
+    assert ver >= 1
     assert isinstance(prog, bytearray)
-    r = bech32_encode(hrp, bytearray([ver]) + bech32_re_arrange_5(prog))
+    r = bech32m_encode(hrp, bytearray([ver]) + bech32m_re_arrange_5(prog))
     b = decode(hrp, r)
     assert b[0] == ver
     assert b[1] == prog
