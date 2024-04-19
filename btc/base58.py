@@ -49,7 +49,7 @@ def decode(s: str) -> bytearray:
         digit = B58_DIGITS.index(c)
         n += digit
     # Convert the integer to bytes
-    res = bytearray(n.to_bytes((n.bit_length() + 7) // 8))
+    res = bytearray(n.to_bytes(max((n.bit_length() + 7) // 8, 1)))
     # Add padding back.
     pad = 0
     for c in s[:-1]:
