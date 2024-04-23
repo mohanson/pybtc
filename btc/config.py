@@ -11,6 +11,11 @@ class ObjectDict(dict):
 
 develop = ObjectDict({
     'name': 'develop',
+    'rpc': ObjectDict({
+        'addr': 'http://127.0.0.1:18443',
+        'username': 'user',
+        'password': 'pass',
+    })
 })
 
 mainnet = ObjectDict({

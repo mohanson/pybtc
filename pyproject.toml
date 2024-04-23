@@ -11,6 +11,7 @@ authors = [
 description = "Python SDK for BTC"
 readme = "README.md"
 license = { file = "LICENSE" }
+dependencies = ["requests"]
 
 [project.urls]
 homepage = "https://github.com/mohanson/pybtc"
