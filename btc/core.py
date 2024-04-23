@@ -8,7 +8,7 @@ def hash160(data: bytearray) -> bytearray:
     return bytearray(btc.ripemd160.ripemd160(hashlib.sha256(data).digest()).digest())
 
 
-def hash256(data: bytearray):
+def hash256(data: bytearray) -> bytearray:
     return bytearray(hashlib.sha256(hashlib.sha256(data).digest()).digest())
 
 
@@ -102,10 +102,7 @@ class PubKey:
 def address_p2pkh(pubkey: PubKey):
     # Legacy
     pubkey_hash = hash160(pubkey.sec())
-    if btc.config.current == btc.config.mainnet:
-        version = bytearray([0x00])
-    else:
-        version = bytearray([0x6f])
+    version = bytearray([btc.config.current.prefix.p2pkh])
     checksum = hash256(version + pubkey_hash)
     address = btc.base58.encode(version + pubkey_hash + checksum[:4])
     return address
@@ -116,10 +113,7 @@ def address_p2sh(pubkey: PubKey):
     # See https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki
     pubkey_hash = hash160(pubkey.sec())
     redeem_hash = hash160(bytearray([0x00, 0x14]) + pubkey_hash)
-    if btc.config.current == btc.config.mainnet:
-        version = bytearray([0x05])
-    else:
-        version = bytearray([0xc4])
+    version = bytearray([btc.config.current.prefix.p2sh])
     checksum = hash256(version + redeem_hash)
     address = btc.base58.encode(version + redeem_hash + checksum[:4])
     return address
@@ -129,10 +123,7 @@ def address_p2wpkh(pubkey: PubKey):
     # Native SegWit.
     # See https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki
     pubkey_hash = hash160(pubkey.sec())
-    if btc.config.current == btc.config.mainnet:
-        return btc.bech32.encode('bc', 0, pubkey_hash)
-    else:
-        return btc.bech32.encode('tb', 0, pubkey_hash)
+    return btc.bech32.encode(btc.config.current.prefix.bech32, 0, pubkey_hash)
 
 
 def address_p2tr(pubkey: PubKey):
@@ -151,7 +142,4 @@ def address_p2tr(pubkey: PubKey):
     tweak_k = btc.secp256k1.Fr(int.from_bytes(hashlib.sha256(tweak_k_data).digest()))
     tweak_p = btc.secp256k1.G * tweak_k
     tweak_p = btc.secp256k1.Pt(btc.secp256k1.Fq(pubkey.x), btc.secp256k1.Fq(pubkey.y)) + tweak_p
-    if btc.config.current == btc.config.mainnet:
-        return btc.bech32m.encode('bc', 1, bytearray(tweak_p.x.x.to_bytes(32)))
-    else:
-        return btc.bech32m.encode('tb', 1, bytearray(tweak_p.x.x.to_bytes(32)))
+    return btc.bech32m.encode(btc.config.current.prefix.bech32, 1, bytearray(tweak_p.x.x.to_bytes(32)))

@@ -11,14 +11,44 @@ class ObjectDict(dict):
 
 develop = ObjectDict({
     'name': 'develop',
+    'rpc': ObjectDict({
+        'addr': 'http://127.0.0.1:18443',
+        'username': 'user',
+        'password': 'pass',
+    }),
+    'prefix': ObjectDict({
+        'p2pkh': 0x6f,
+        'p2sh': 0xc4,
+        'bech32': 'bcrt',
+    }),
 })
 
 mainnet = ObjectDict({
     'name': 'mainnet',
+    'rpc': ObjectDict({
+        'addr': 'http://127.0.0.1:8332',
+        'username': 'user',
+        'password': 'pass',
+    }),
+    'prefix': ObjectDict({
+        'p2pkh': 0x00,
+        'p2sh': 0x05,
+        'bech32': 'bc',
+    }),
 })
 
 testnet = ObjectDict({
     'name': 'testnet',
+    'rpc': ObjectDict({
+        'addr': 'http://127.0.0.1:18332',
+        'username': 'user',
+        'password': 'pass',
+    }),
+    'prefix': ObjectDict({
+        'p2pkh': 0x6f,
+        'p2sh': 0xc4,
+        'bech32': 'tb',
+    }),
 })
 
 current = develop
