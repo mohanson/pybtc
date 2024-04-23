@@ -19,9 +19,8 @@ def call(method: str, params: typing.List[typing.Any]) -> typing.Any:
     return r['result']
 
 
-def generate_to_address(nblocks: int, address: str) -> typing.List[bytearray]:
-    r = call('generatetoaddress', [nblocks, address])
-    return [bytearray.fromhex(e) for e in r]
+def generate_to_address(nblocks: int, address: str) -> typing.List[str]:
+    return call('generatetoaddress', [nblocks, address])
 
 
 def get_block_count() -> int:
