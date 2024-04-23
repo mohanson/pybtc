@@ -30,6 +30,23 @@ $ python example/addr.py --net mainnet --prikey 0x000000000000000000000000000000
 # p2tr   bc1pmfr3p9j00pfxjh0zmgp99y8zftmd3s5pmedqhyptwy6lm87hf5sspknck9
 ```
 
+## Test
+
+The testing of this project depends on regtest. You can use the following steps to build the regtest node.
+
+```sh
+$ wget https://bitcoincore.org/bin/bitcoin-core-27.0/bitcoin-27.0-x86_64-linux-gnu.tar.gz
+$ tar -zxvf bitcoin-27.0-x86_64-linux-gnu.tar.gz
+$ cd bitcoin-27.0
+
+$ mkdir ~/.bitcoin
+$ echo "chain=regtest" >> ~/.bitcoin/bitcoin.conf
+$ echo "rpcpassword=pass" >> ~/.bitcoin/bitcoin.conf
+$ echo "rpcuser=user" >> ~/.bitcoin/bitcoin.conf
+
+$ bitcoind
+```
+
 ## License
 
 MIT
