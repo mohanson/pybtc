@@ -9,7 +9,7 @@ class Fp:
 
     p = 0
 
-    def __init__(self, x):
+    def __init__(self, x: int):
         self.x = x % self.p
 
     def __repr__(self):
@@ -87,7 +87,7 @@ B = Fq(7)
 
 class Pt:
 
-    def __init__(self, x, y):
+    def __init__(self, x: Fq, y: Fq):
         if x != Fq(0) or y != Fq(0):
             assert y ** 2 == x ** 3 + A * x + B
         self.x = x
@@ -122,7 +122,7 @@ class Pt:
     def __sub__(self, data):
         return self + data.__neg__()
 
-    def __mul__(self, k):
+    def __mul__(self, k: Fr):
         # Point multiplication: Double-and-add
         # https://en.wikipedia.org/wiki/Elliptic_curve_point_multiplication
         n = k.x
