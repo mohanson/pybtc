@@ -21,6 +21,10 @@ def call(method: str, params: typing.List[typing.Any]) -> typing.Any:
     return r['result']
 
 
+def decode_raw_transaction(tx: str) -> typing.Dict:
+    return call('decoderawtransaction', [tx])
+
+
 def generate_to_address(nblocks: int, address: str) -> typing.List[str]:
     return call('generatetoaddress', [nblocks, address])
 
