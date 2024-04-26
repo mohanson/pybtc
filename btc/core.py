@@ -99,7 +99,7 @@ class PubKey:
 # Bitcoin address prefix: https://en.bitcoin.it/wiki/List_of_address_prefixes
 
 
-def address_p2pkh(pubkey: PubKey):
+def address_p2pkh(pubkey: PubKey) -> str:
     # Legacy
     pubkey_hash = hash160(pubkey.sec())
     version = bytearray([btc.config.current.prefix.p2pkh])
@@ -108,7 +108,7 @@ def address_p2pkh(pubkey: PubKey):
     return address
 
 
-def address_p2sh(pubkey: PubKey):
+def address_p2sh(pubkey: PubKey) -> str:
     # Nested Segwit.
     # See https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki
     pubkey_hash = hash160(pubkey.sec())
@@ -119,14 +119,14 @@ def address_p2sh(pubkey: PubKey):
     return address
 
 
-def address_p2wpkh(pubkey: PubKey):
+def address_p2wpkh(pubkey: PubKey) -> str:
     # Native SegWit.
     # See https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki
     pubkey_hash = hash160(pubkey.sec())
     return btc.bech32.encode(btc.config.current.prefix.bech32, 0, pubkey_hash)
 
 
-def address_p2tr(pubkey: PubKey):
+def address_p2tr(pubkey: PubKey) -> str:
     # Taproot.
     # See https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki
     if pubkey.y & 1 != 0:

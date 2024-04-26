@@ -37,7 +37,7 @@ The testing of this project depends on regtest. You can use the following steps 
 ```sh
 $ wget https://bitcoincore.org/bin/bitcoin-core-27.0/bitcoin-27.0-x86_64-linux-gnu.tar.gz
 $ tar -zxvf bitcoin-27.0-x86_64-linux-gnu.tar.gz
-$ cd bitcoin-27.0
+$ cp -R bitcoin-27.0 ~/app/bitcoin # Install to the target location.
 
 $ mkdir ~/.bitcoin
 $ echo "chain=regtest" >> ~/.bitcoin/bitcoin.conf
