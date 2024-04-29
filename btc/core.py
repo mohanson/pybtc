@@ -143,3 +143,39 @@ def address_p2tr(pubkey: PubKey) -> str:
     tweak_p = btc.secp256k1.G * tweak_k
     tweak_p = btc.secp256k1.Pt(btc.secp256k1.Fq(pubkey.x), btc.secp256k1.Fq(pubkey.y)) + tweak_p
     return btc.bech32m.encode(btc.config.current.prefix.bech32, 1, bytearray(tweak_p.x.x.to_bytes(32)))
+
+
+def compact_size_encode(n: int) -> bytearray:
+    # Integer can be encoded depending on the represented value to save space. Variable length integers always precede
+    # an array/vector of a type of data that may vary in length. Longer numbers are encoded in little endian.
+    # See: https://en.bitcoin.it/wiki/Protocol_documentation#Variable_length_integer
+    assert n >= 0
+    assert n <= 0xffffffffffffffff
+    if n <= 0xfc:
+        return bytearray([n])
+    if n <= 0xffff:
+        return bytearray([0xfd]) + bytearray(n.to_bytes(2, 'little'))
+    if n <= 0xffffffff:
+        return bytearray([0xfe]) + bytearray(n.to_bytes(4, 'little'))
+    if n <= 0xffffffffffffffff:
+        return bytearray([0xff]) + bytearray(n.to_bytes(8, 'little'))
+    raise Exception
+
+
+def compact_size_decode_size(head: int) -> int:
+    if head <= 0xfc:
+        return 1
+    if head == 0xfd:
+        return 3
+    if head == 0xfe:
+        return 5
+    if head == 0xff:
+        return 9
+    raise Exception
+
+
+def compact_size_decode(data: bytearray) -> int:
+    assert len(data) in [1, 3, 5, 9]
+    if len(data) == 1:
+        return data[0]
+    return int.from_bytes(data[1:], 'little')

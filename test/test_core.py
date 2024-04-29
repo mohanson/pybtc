@@ -89,3 +89,18 @@ def test_address_p2tr():
     btc.config.current = btc.config.testnet
     addr = btc.core.address_p2tr(pubkey)
     assert addr == 'tb1pmfr3p9j00pfxjh0zmgp99y8zftmd3s5pmedqhyptwy6lm87hf5ssk79hv2'
+
+
+def test_compact_size():
+    for n, b in [
+        [0xbb, bytearray([0xbb])],
+        [0xff, bytearray([0xfd, 0xff, 0x00])],
+        [0x3419, bytearray([0xfd, 0x19, 0x34])],
+        [0xdc4591, bytearray([0xfe, 0x91, 0x45, 0xdc, 00])],
+        [0x80081e5, bytearray([0xfe, 0xe5, 0x81, 0x00, 0x08])],
+        [0xb4da564e2857, bytearray([0xff, 0x57, 0x28, 0x4e, 0x56, 0xda, 0xb4, 0x00, 0x00])],
+        [0x4bf583a17d59c158, bytearray([0xff, 0x58, 0xc1, 0x59, 0x7d, 0xa1, 0x83, 0xf5, 0x4b])],
+    ]:
+        assert btc.core.compact_size_encode(n) == b
+        assert btc.core.compact_size_decode(b) == n
+        assert btc.core.compact_size_decode_size(b[0]) == len(b)
