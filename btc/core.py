@@ -22,8 +22,7 @@ class PriKey:
         return json.dumps(self.json())
 
     def __eq__(self, other):
-        a = self.n == other.n
-        return a
+        return self.n == other.n
 
     def json(self):
         return f'0x{self.n:064x}'
@@ -65,9 +64,10 @@ class PubKey:
         return json.dumps(self.json())
 
     def __eq__(self, other):
-        a = self.x == other.x
-        b = self.y == other.y
-        return a and b
+        return all([
+            self.x == other.x,
+            self.y == other.y,
+        ])
 
     def json(self):
         return {
@@ -201,6 +201,12 @@ class OutPoint:
     def __repr__(self):
         return json.dumps(self.json())
 
+    def __eq__(self, other):
+        return all([
+            self.txid == other.txid,
+            self.vout == other.vout,
+        ])
+
     def json(self):
         return {
             'txid': f'0x{self.txid.hex()}',
@@ -219,6 +225,14 @@ class TxIn:
 
     def __repr__(self):
         return json.dumps(self.json())
+
+    def __eq__(self, other):
+        return all([
+            self.out_point == other.out_point,
+            self.script_sig == other.script_sig,
+            self.sequence == other.sequence,
+            self.witness == other.witness,
+        ])
 
     def json(self):
         return {
@@ -239,6 +253,12 @@ class TxOut:
     def __repr__(self):
         return json.dumps(self.json())
 
+    def __eq__(self, other):
+        return all([
+            self.value == other.value,
+            self.script_pubkey == other.script_pubkey,
+        ])
+
     def json(self):
         return {
             'value': self.value,
@@ -255,6 +275,14 @@ class Transaction:
 
     def __repr__(self):
         return json.dumps(self.json())
+
+    def __eq__(self, other):
+        return all([
+            self.version == other.version,
+            self.vin == other.vin,
+            self.vout == other.vout,
+            self.locktime == other.locktime,
+        ])
 
     def json(self):
         return {
