@@ -35,3 +35,7 @@ def get_best_block_hash() -> str:
 
 def get_block_count() -> int:
     return call('getblockcount', [])
+
+
+def list_unspent(addresses: typing.List[str]) -> typing.List:
+    return call('listunspent', [1, 9999999, addresses])

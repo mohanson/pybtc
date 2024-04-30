@@ -1,5 +1,6 @@
 import btc
 import json
+import typing
 
 
 class Wallet:
@@ -24,3 +25,6 @@ class Wallet:
             'pubkey': self.pubkey.json(),
             'addr': self.addr,
         }
+
+    def utxo(self) -> typing.List[typing.Dict]:
+        return btc.rpc.list_unspent([self.addr])
