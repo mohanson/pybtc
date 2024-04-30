@@ -7,3 +7,4 @@ from . import denomination
 from . import ripemd160
 from . import rpc
 from . import secp256k1
+from . import wallet

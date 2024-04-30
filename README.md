@@ -49,6 +49,7 @@ $ echo "txindex=1" >> ~/.bitcoin/bitcoin.conf
 $ bitcoind
 $ bitcoin-cli -named createwallet wallet_name=main descriptors=false load_on_startup=true
 $ bitcoin-cli importaddress mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r
+$ bitcoin-cli generatetoaddress 101 mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r
 $ bitcoin-cli importaddress mg8Jz5776UdyiYcBb9Z873NTozEiADRW5H
 ```
 
