@@ -129,3 +129,4 @@ def test_transaction():
     assert len(tx.vin) == 1
     assert len(tx.vout) == 2
     assert tx.locktime == 0
+    assert tx.weight() == 569

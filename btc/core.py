@@ -343,3 +343,11 @@ class Transaction:
             tx.vin[i].witness = witness
         tx.locktime = int.from_bytes(reader.read(4), 'little')
         return tx
+
+    def weight(self):
+        lightb = 2
+        lightb += len(compact_size_encode(len(self.vin)))
+        for i in self.vin:
+            lightb += len(compact_size_encode(len(i.witness)))
+            lightb += len(i.witness)
+        return 4 * len(self.serialize()) - 3 * lightb
