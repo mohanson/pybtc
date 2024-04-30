@@ -2,6 +2,7 @@ import btc.config
 import btc.ripemd160
 import hashlib
 import json
+import typing
 
 
 def hash160(data: bytearray) -> bytearray:
@@ -179,3 +180,161 @@ def compact_size_decode(data: bytearray) -> int:
     if len(data) == 1:
         return data[0]
     return int.from_bytes(data[1:], 'little')
+
+
+class OutPoint:
+    def __init__(self, txid: bytearray, vout: int):
+        assert len(txid) == 32
+        assert vout >= 0
+        assert vout <= 0xffffffff
+        self.txid = txid
+        self.vout = vout
+
+    def __repr__(self):
+        return json.dumps(self.json())
+
+    def json(self):
+        return {
+            'txid': f'0x{self.txid.hex()}',
+            'vout': self.vout,
+        }
+
+
+class TxIn:
+    def __init__(self, out_point: OutPoint, script_sig: bytearray, sequence: int, witness: bytearray):
+        assert sequence >= 0
+        assert sequence <= 0xffffffff
+        self.out_point = out_point
+        self.script_sig = script_sig
+        self.sequence = sequence
+        self.witness = witness
+
+    def __repr__(self):
+        return json.dumps(self.json())
+
+    def json(self):
+        return {
+            'out_point': self.out_point.json(),
+            'script_sig': f'0x{self.script_sig.hex()}',
+            'sequence': self.sequence,
+            'witness': f'0x{self.witness.hex()}',
+        }
+
+
+class TxOut:
+    def __init__(self, value: int, script_pubkey: bytearray):
+        assert value >= 0
+        assert value <= 0xffffffffffffffff
+        self.value = value
+        self.script_pubkey = script_pubkey
+
+    def __repr__(self):
+        return json.dumps(self.json())
+
+    def json(self):
+        return {
+            'value': self.value,
+            'script_pubkey': f'0x{self.script_pubkey.hex()}',
+        }
+
+
+class Transaction:
+    def __init__(self, version: int, vin: typing.List[TxIn], vout: typing.List[TxOut], locktime: int):
+        self.version = version
+        self.vin = vin
+        self.vout = vout
+        self.locktime = locktime
+
+    def __repr__(self):
+        return json.dumps(self.json())
+
+    def json(self):
+        return {
+            'version': self.version,
+            'vin': [e.json() for e in self.vin],
+            'vout': [e.json() for e in self.vout],
+            'locktime': self.locktime,
+        }
+
+    def serialize(self):
+        # BIP-0144 defines new messages and serialization formats for propagation of transactions and blocks committing
+        # to segregated witness structures.
+        # See: https://github.com/bitcoin/bips/blob/master/bip-0144.mediawiki
+        data = bytearray()
+        data.extend(bytearray([self.version, 0x00, 0x00, 0x00]))
+        data.append(0x00)
+        data.append(0x01)
+        data.extend(compact_size_encode(len(self.vin)))
+        for i in self.vin:
+            # Why does bitcoin core print sha256 hashes (uint256) bytes in reverse order?
+            # See: https://bitcoin.stackexchange.com/questions/116730
+            data.extend(i.out_point.txid[::-1])
+            data.extend(i.out_point.vout.to_bytes(4, 'little'))
+            data.extend(compact_size_encode(len(i.script_sig)))
+            data.extend(i.script_sig)
+            data.extend(i.sequence.to_bytes(4, 'little'))
+        data.extend(compact_size_encode(len(self.vout)))
+        for o in self.vout:
+            data.extend(o.value.to_bytes(8, 'little'))
+            data.extend(compact_size_encode(len(o.script_pubkey)))
+            data.extend(o.script_pubkey)
+        data.extend(compact_size_encode(len(self.vin)))
+        for i in self.vin:
+            data.extend(compact_size_encode(len(i.witness)))
+            data.extend(i.witness)
+        data.extend(self.locktime.to_bytes(4, 'little'))
+        return data
+
+    @staticmethod
+    def serialize_read(data: bytearray):
+        s = 0
+        version = int.from_bytes(data[s: s+4], 'little')
+        s += 4
+        assert data[s] == 0x00
+        s += 1
+        assert data[s] == 0x01
+        s += 1
+        n = compact_size_decode_size(data[s])
+        c = compact_size_decode(data[s: s + n])
+        s += n
+        vin = []
+        for _ in range(c):
+            txid = data[s: s+32][::-1]
+            s += 32
+            vout = int.from_bytes(data[s: s+4], 'little')
+            s += 4
+            n = compact_size_decode_size(data[s])
+            c = compact_size_decode(data[s: s + n])
+            s += n
+            script_sig = data[s: s+c]
+            s += c
+            sequence = int.from_bytes(data[s: s+4], 'little')
+            s += 4
+            out_point = OutPoint(txid, vout)
+            txin = TxIn(out_point, script_sig, sequence, bytearray())
+            vin.append(txin)
+        n = compact_size_decode_size(data[s])
+        c = compact_size_decode(data[s: s + n])
+        s += n
+        vout = []
+        for _ in range(c):
+            value = int.from_bytes(data[s: s+8], 'little')
+            s += 8
+            n = compact_size_decode_size(data[s])
+            c = compact_size_decode(data[s: s + n])
+            s += n
+            script_pubkey = data[s: s+c]
+            s += c
+            vout.append(TxOut(value, script_pubkey))
+        n = compact_size_decode_size(data[s])
+        c = compact_size_decode(data[s: s + n])
+        s += n
+        for i in range(c):
+            n = compact_size_decode_size(data[s])
+            c = compact_size_decode(data[s: s + n])
+            s += n
+            witness = data[s: s+c]
+            s += c
+            vin[i].witness = witness
+        locktime = int.from_bytes(data[s:s+4], 'little')
+        return Transaction(version, vin, vout, locktime)
