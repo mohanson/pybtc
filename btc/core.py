@@ -1,6 +1,7 @@
 import btc.config
 import btc.ripemd160
 import hashlib
+import io
 import json
 import typing
 
@@ -182,6 +183,19 @@ def compact_size_decode(data: bytearray) -> int:
     return int.from_bytes(data[1:], 'little')
 
 
+def compact_size_decode_reader(reader: typing.BinaryIO) -> int:
+    head = reader.read(1)
+    if head <= 0xfc:
+        return head
+    if head == 0xfd:
+        return int.from_bytes(reader.read(2), 'little')
+    if head == 0xfe:
+        return int.from_bytes(reader.read(4), 'little')
+    if head == 0xff:
+        return int.from_bytes(reader.read(8), 'little')
+    raise Exception
+
+
 class OutPoint:
     def __init__(self, txid: bytearray, vout: int):
         assert len(txid) == 32
@@ -287,54 +301,23 @@ class Transaction:
 
     @staticmethod
     def serialize_read(data: bytearray):
-        s = 0
-        version = int.from_bytes(data[s: s+4], 'little')
-        s += 4
-        assert data[s] == 0x00
-        s += 1
-        assert data[s] == 0x01
-        s += 1
-        n = compact_size_decode_size(data[s])
-        c = compact_size_decode(data[s: s + n])
-        s += n
-        vin = []
-        for _ in range(c):
-            txid = data[s: s+32][::-1]
-            s += 32
-            vout = int.from_bytes(data[s: s+4], 'little')
-            s += 4
-            n = compact_size_decode_size(data[s])
-            c = compact_size_decode(data[s: s + n])
-            s += n
-            script_sig = data[s: s+c]
-            s += c
-            sequence = int.from_bytes(data[s: s+4], 'little')
-            s += 4
-            out_point = OutPoint(txid, vout)
-            txin = TxIn(out_point, script_sig, sequence, bytearray())
-            vin.append(txin)
-        n = compact_size_decode_size(data[s])
-        c = compact_size_decode(data[s: s + n])
-        s += n
-        vout = []
-        for _ in range(c):
-            value = int.from_bytes(data[s: s+8], 'little')
-            s += 8
-            n = compact_size_decode_size(data[s])
-            c = compact_size_decode(data[s: s + n])
-            s += n
-            script_pubkey = data[s: s+c]
-            s += c
-            vout.append(TxOut(value, script_pubkey))
-        n = compact_size_decode_size(data[s])
-        c = compact_size_decode(data[s: s + n])
-        s += n
-        for i in range(c):
-            n = compact_size_decode_size(data[s])
-            c = compact_size_decode(data[s: s + n])
-            s += n
-            witness = data[s: s+c]
-            s += c
-            vin[i].witness = witness
-        locktime = int.from_bytes(data[s:s+4], 'little')
-        return Transaction(version, vin, vout, locktime)
+        reader = io.BytesIO(data)
+        tx = Transaction(0, [], [], 0)
+        tx.version = int.from_bytes(reader.read(4), 'little')
+        assert reader.read(1) == 0x00
+        assert reader.read(1) == 0x01
+        for _ in range(compact_size_decode_reader(reader)):
+            txid = bytearray(reader.read(32))[::-1]
+            vout = int.from_bytes(reader.read(4), 'little')
+            script_sig = bytearray(reader.read(compact_size_decode_reader(reader)))
+            sequence = int.from_bytes(reader.read(4), 'little')
+            tx.vin.append(TxIn(OutPoint(txid, vout), script_sig, sequence, bytearray()))
+        for _ in range(compact_size_decode_reader(reader)):
+            value = int.from_bytes(reader.read(8), 'little')
+            script_pubkey = bytearray(reader.read(compact_size_decode_reader(reader)))
+            tx.vout.append(TxOut(value, script_pubkey))
+        for i in range(compact_size_decode_reader(reader)):
+            witness = bytearray(reader.read(compact_size_decode_reader(reader)))
+            tx.vin[i].witness = witness
+        tx.locktime = int.from_bytes(reader.read(4), 'little')
+        return tx
