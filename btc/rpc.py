@@ -1,4 +1,5 @@
 import btc
+import decimal
 import random
 import requests
 import typing
@@ -15,7 +16,7 @@ def call(method: str, params: typing.List[typing.Any]) -> typing.Any:
     }, auth=(
         btc.config.current.rpc.username,
         btc.config.current.rpc.password,
-    )).json()
+    )).json(parse_float=decimal.Decimal)
     if 'error' in r and r['error']:
         raise Exception(r['error'])
     return r['result']
@@ -35,6 +36,10 @@ def get_best_block_hash() -> str:
 
 def get_block_count() -> int:
     return call('getblockcount', [])
+
+
+def get_tx_out(txid: str, vout: int) -> typing.Dict:
+    return call('gettxout', [txid, vout])
 
 
 def list_unspent(addresses: typing.List[str]) -> typing.List:

@@ -3,6 +3,27 @@ import json
 import typing
 
 
+class WalletUtxo:
+    def __init__(self, out_point: btc.core.OutPoint, value: int):
+        self.out_point = out_point
+        self.value = value
+
+    def __repr__(self):
+        return json.dumps(self.json())
+
+    def __eq__(self, other):
+        return all([
+            self.out_point == other.out_point,
+            self.value == other.value,
+        ])
+
+    def json(self):
+        return {
+            'out_point': self.out_point.json(),
+            'value': self.value,
+        }
+
+
 class Wallet:
     def __init__(self, prikey: int):
         self.prikey = btc.core.PriKey(prikey)
@@ -19,6 +40,9 @@ class Wallet:
             self.addr == other.addr,
         ])
 
+    def balance(self):
+        return sum([e.value for e in self.unspent()])
+
     def json(self):
         return {
             'prikey': self.prikey.json(),
@@ -26,5 +50,12 @@ class Wallet:
             'addr': self.addr,
         }
 
-    def utxo(self) -> typing.List[typing.Dict]:
-        return btc.rpc.list_unspent([self.addr])
+    def unspent(self) -> typing.List[WalletUtxo]:
+        r = []
+        for e in btc.rpc.list_unspent([self.addr]):
+            out_point = btc.core.OutPoint(bytearray.fromhex(e['txid']), e['vout'])
+            value = e['amount'] * btc.denomination.bitcoin
+            value = int(value.to_integral_exact())
+            wallet_utxo = WalletUtxo(out_point, value)
+            r.append(wallet_utxo)
+        return r
