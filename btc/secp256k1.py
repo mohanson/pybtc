@@ -97,7 +97,10 @@ class Pt:
         return f'Pt({self.x}, {self.y})'
 
     def __eq__(self, data):
-        return self.x == data.x and self.y == data.y
+        return all([
+            self.x == data.x,
+            self.y == data.y,
+        ])
 
     def __add__(self, data):
         # https://www.cs.miami.edu/home/burt/learning/Csc609.142/ecdsa-cert.pdf

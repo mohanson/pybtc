@@ -1,7 +1,9 @@
 import btc.config
 import btc.ripemd160
 import hashlib
+import io
 import json
+import typing
 
 
 def hash160(data: bytearray) -> bytearray:
@@ -20,8 +22,7 @@ class PriKey:
         return json.dumps(self.json())
 
     def __eq__(self, other):
-        a = self.n == other.n
-        return a
+        return self.n == other.n
 
     def json(self):
         return f'0x{self.n:064x}'
@@ -63,9 +64,10 @@ class PubKey:
         return json.dumps(self.json())
 
     def __eq__(self, other):
-        a = self.x == other.x
-        b = self.y == other.y
-        return a and b
+        return all([
+            self.x == other.x,
+            self.y == other.y,
+        ])
 
     def json(self):
         return {
@@ -162,20 +164,182 @@ def compact_size_encode(n: int) -> bytearray:
     raise Exception
 
 
-def compact_size_decode_size(head: int) -> int:
+def compact_size_decode(data: bytearray) -> int:
+    head = data[0]
     if head <= 0xfc:
-        return 1
+        return head
     if head == 0xfd:
-        return 3
+        assert len(data) == 3
     if head == 0xfe:
-        return 5
+        assert len(data) == 5
     if head == 0xff:
-        return 9
+        assert len(data) == 9
+    return int.from_bytes(data[1:], 'little')
+
+
+def compact_size_decode_reader(reader: typing.BinaryIO) -> int:
+    head = reader.read(1)[0]
+    if head <= 0xfc:
+        return head
+    if head == 0xfd:
+        return int.from_bytes(reader.read(2), 'little')
+    if head == 0xfe:
+        return int.from_bytes(reader.read(4), 'little')
+    if head == 0xff:
+        return int.from_bytes(reader.read(8), 'little')
     raise Exception
 
 
-def compact_size_decode(data: bytearray) -> int:
-    assert len(data) in [1, 3, 5, 9]
-    if len(data) == 1:
-        return data[0]
-    return int.from_bytes(data[1:], 'little')
+class OutPoint:
+    def __init__(self, txid: bytearray, vout: int):
+        assert len(txid) == 32
+        assert vout >= 0
+        assert vout <= 0xffffffff
+        self.txid = txid
+        self.vout = vout
+
+    def __repr__(self):
+        return json.dumps(self.json())
+
+    def __eq__(self, other):
+        return all([
+            self.txid == other.txid,
+            self.vout == other.vout,
+        ])
+
+    def json(self):
+        return {
+            'txid': f'0x{self.txid.hex()}',
+            'vout': self.vout,
+        }
+
+
+class TxIn:
+    def __init__(self, out_point: OutPoint, script_sig: bytearray, sequence: int, witness: bytearray):
+        assert sequence >= 0
+        assert sequence <= 0xffffffff
+        self.out_point = out_point
+        self.script_sig = script_sig
+        self.sequence = sequence
+        self.witness = witness
+
+    def __repr__(self):
+        return json.dumps(self.json())
+
+    def __eq__(self, other):
+        return all([
+            self.out_point == other.out_point,
+            self.script_sig == other.script_sig,
+            self.sequence == other.sequence,
+            self.witness == other.witness,
+        ])
+
+    def json(self):
+        return {
+            'out_point': self.out_point.json(),
+            'script_sig': f'0x{self.script_sig.hex()}',
+            'sequence': self.sequence,
+            'witness': f'0x{self.witness.hex()}',
+        }
+
+
+class TxOut:
+    def __init__(self, value: int, script_pubkey: bytearray):
+        assert value >= 0
+        assert value <= 0xffffffffffffffff
+        self.value = value
+        self.script_pubkey = script_pubkey
+
+    def __repr__(self):
+        return json.dumps(self.json())
+
+    def __eq__(self, other):
+        return all([
+            self.value == other.value,
+            self.script_pubkey == other.script_pubkey,
+        ])
+
+    def json(self):
+        return {
+            'value': self.value,
+            'script_pubkey': f'0x{self.script_pubkey.hex()}',
+        }
+
+
+class Transaction:
+    def __init__(self, version: int, vin: typing.List[TxIn], vout: typing.List[TxOut], locktime: int):
+        self.version = version
+        self.vin = vin
+        self.vout = vout
+        self.locktime = locktime
+
+    def __repr__(self):
+        return json.dumps(self.json())
+
+    def __eq__(self, other):
+        return all([
+            self.version == other.version,
+            self.vin == other.vin,
+            self.vout == other.vout,
+            self.locktime == other.locktime,
+        ])
+
+    def json(self):
+        return {
+            'version': self.version,
+            'vin': [e.json() for e in self.vin],
+            'vout': [e.json() for e in self.vout],
+            'locktime': self.locktime,
+        }
+
+    def serialize(self):
+        # BIP-0144 defines new messages and serialization formats for propagation of transactions and blocks committing
+        # to segregated witness structures.
+        # See: https://github.com/bitcoin/bips/blob/master/bip-0144.mediawiki
+        data = bytearray()
+        data.extend(bytearray([self.version, 0x00, 0x00, 0x00]))
+        data.append(0x00)
+        data.append(0x01)
+        data.extend(compact_size_encode(len(self.vin)))
+        for i in self.vin:
+            # Why does bitcoin core print sha256 hashes (uint256) bytes in reverse order?
+            # See: https://bitcoin.stackexchange.com/questions/116730
+            data.extend(i.out_point.txid[::-1])
+            data.extend(i.out_point.vout.to_bytes(4, 'little'))
+            data.extend(compact_size_encode(len(i.script_sig)))
+            data.extend(i.script_sig)
+            data.extend(i.sequence.to_bytes(4, 'little'))
+        data.extend(compact_size_encode(len(self.vout)))
+        for o in self.vout:
+            data.extend(o.value.to_bytes(8, 'little'))
+            data.extend(compact_size_encode(len(o.script_pubkey)))
+            data.extend(o.script_pubkey)
+        data.extend(compact_size_encode(len(self.vin)))
+        for i in self.vin:
+            data.extend(compact_size_encode(len(i.witness)))
+            data.extend(i.witness)
+        data.extend(self.locktime.to_bytes(4, 'little'))
+        return data
+
+    @staticmethod
+    def serialize_read(data: bytearray):
+        reader = io.BytesIO(data)
+        tx = Transaction(0, [], [], 0)
+        tx.version = int.from_bytes(reader.read(4), 'little')
+        assert reader.read(1)[0] == 0x00
+        assert reader.read(1)[0] == 0x01
+        for _ in range(compact_size_decode_reader(reader)):
+            txid = bytearray(reader.read(32))[::-1]
+            vout = int.from_bytes(reader.read(4), 'little')
+            script_sig = bytearray(reader.read(compact_size_decode_reader(reader)))
+            sequence = int.from_bytes(reader.read(4), 'little')
+            tx.vin.append(TxIn(OutPoint(txid, vout), script_sig, sequence, bytearray()))
+        for _ in range(compact_size_decode_reader(reader)):
+            value = int.from_bytes(reader.read(8), 'little')
+            script_pubkey = bytearray(reader.read(compact_size_decode_reader(reader)))
+            tx.vout.append(TxOut(value, script_pubkey))
+        for i in range(compact_size_decode_reader(reader)):
+            witness = bytearray(reader.read(compact_size_decode_reader(reader)))
+            tx.vin[i].witness = witness
+        tx.locktime = int.from_bytes(reader.read(4), 'little')
+        return tx
