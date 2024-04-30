@@ -105,7 +105,9 @@ def test_compact_size():
         assert btc.core.compact_size_decode(b) == n
 
 
-def test_transaction_serialize():
+def test_transaction():
+    # Data copied from mastering bitcoin, chapter 6, example 1, alice's serialized transaction.
+    # See: https://github.com/bitcoinbook/bitcoinbook/blob/develop/ch06_transactions.adoc
     data = bytearray([
         0x01, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0xeb, 0x3a, 0xe3, 0x8f, 0x27, 0x19, 0x1a, 0xa5, 0xf3,
         0x85, 0x0d, 0xc9, 0xca, 0xd0, 0x04, 0x92, 0xb8, 0x8b, 0x72, 0x40, 0x4f, 0x9d, 0xa1, 0x35, 0x69,
@@ -123,3 +125,7 @@ def test_transaction_serialize():
     ])
     tx = btc.core.Transaction.serialize_read(data)
     assert tx.serialize() == data
+    assert tx.version == 1
+    assert len(tx.vin) == 1
+    assert len(tx.vout) == 2
+    assert tx.locktime == 0
