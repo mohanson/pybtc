@@ -103,7 +103,6 @@ def test_compact_size():
     ]:
         assert btc.core.compact_size_encode(n) == b
         assert btc.core.compact_size_decode(b) == n
-        assert btc.core.compact_size_decode_size(b[0]) == len(b)
 
 
 def test_transaction_serialize():

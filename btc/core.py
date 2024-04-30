@@ -164,27 +164,21 @@ def compact_size_encode(n: int) -> bytearray:
     raise Exception
 
 
-def compact_size_decode_size(head: int) -> int:
-    if head <= 0xfc:
-        return 1
-    if head == 0xfd:
-        return 3
-    if head == 0xfe:
-        return 5
-    if head == 0xff:
-        return 9
-    raise Exception
-
-
 def compact_size_decode(data: bytearray) -> int:
-    assert len(data) in [1, 3, 5, 9]
-    if len(data) == 1:
-        return data[0]
+    head = data[0]
+    if head <= 0xfc:
+        return head
+    if head == 0xfd:
+        assert len(data) == 3
+    if head == 0xfe:
+        assert len(data) == 5
+    if head == 0xff:
+        assert len(data) == 9
     return int.from_bytes(data[1:], 'little')
 
 
 def compact_size_decode_reader(reader: typing.BinaryIO) -> int:
-    head = reader.read(1)
+    head = reader.read(1)[0]
     if head <= 0xfc:
         return head
     if head == 0xfd:
@@ -304,8 +298,8 @@ class Transaction:
         reader = io.BytesIO(data)
         tx = Transaction(0, [], [], 0)
         tx.version = int.from_bytes(reader.read(4), 'little')
-        assert reader.read(1) == 0x00
-        assert reader.read(1) == 0x01
+        assert reader.read(1)[0] == 0x00
+        assert reader.read(1)[0] == 0x01
         for _ in range(compact_size_decode_reader(reader)):
             txid = bytearray(reader.read(32))[::-1]
             vout = int.from_bytes(reader.read(4), 'little')
