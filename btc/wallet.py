@@ -31,7 +31,7 @@ class WalletUtxoSearchFromBitcoinCore:
     def unspent(self, addr: str) -> typing.List[WalletUtxo]:
         r = []
         for e in btc.rpc.list_unspent([addr]):
-            out_point = btc.core.OutPoint(bytearray.fromhex(e['txid']), e['vout'])
+            out_point = btc.core.OutPoint(bytearray.fromhex(e['txid'])[::-1], e['vout'])
             value = e['amount'] * btc.denomination.bitcoin
             value = int(value.to_integral_exact())
             wallet_utxo = WalletUtxo(out_point, value)
