@@ -294,12 +294,29 @@ class Transaction:
             'locktime': self.locktime,
         }
 
-    def serialize(self):
-        # BIP-0144 defines new messages and serialization formats for propagation of transactions and blocks committing
-        # to segregated witness structures.
-        # See: https://github.com/bitcoin/bips/blob/master/bip-0144.mediawiki
+    def serialize_legacy(self):
         data = bytearray()
-        data.extend(bytearray([self.version, 0x00, 0x00, 0x00]))
+        data.extend(self.version.to_bytes(4, 'little'))
+        data.extend(compact_size_encode(len(self.vin)))
+        for i in self.vin:
+            # Why does bitcoin core print sha256 hashes (uint256) bytes in reverse order?
+            # See: https://bitcoin.stackexchange.com/questions/116730
+            data.extend(i.out_point.txid[::-1])
+            data.extend(i.out_point.vout.to_bytes(4, 'little'))
+            data.extend(compact_size_encode(len(i.script_sig)))
+            data.extend(i.script_sig)
+            data.extend(i.sequence.to_bytes(4, 'little'))
+        data.extend(compact_size_encode(len(self.vout)))
+        for o in self.vout:
+            data.extend(o.value.to_bytes(8, 'little'))
+            data.extend(compact_size_encode(len(o.script_pubkey)))
+            data.extend(o.script_pubkey)
+        data.extend(self.locktime.to_bytes(4, 'little'))
+        return data
+
+    def serialize_segwit(self):
+        data = bytearray()
+        data.extend(self.version.to_bytes(4, 'little'))
         data.append(0x00)
         data.append(0x01)
         data.extend(compact_size_encode(len(self.vin)))
@@ -322,6 +339,15 @@ class Transaction:
             data.extend(i.witness)
         data.extend(self.locktime.to_bytes(4, 'little'))
         return data
+
+    def serialize(self):
+        # If any inputs have nonempty witnesses, the entire transaction is serialized in the BIP141 Segwit format which
+        # includes a list of witnesses.
+        # See: https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki
+        if any([e.witness != bytearray() for e in self.vin]):
+            return self.serialize_segwit()
+        else:
+            return self.serialize_segwit()
 
     @staticmethod
     def serialize_read(data: bytearray):
