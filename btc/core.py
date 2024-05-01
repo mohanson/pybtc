@@ -267,6 +267,8 @@ class TxOut:
 
 
 class Transaction:
+    # Referring to the design of Bitcoin core.
+    # See: https://github.com/bitcoin/bitcoin/blob/master/src/primitives/transaction.h
     def __init__(self, version: int, vin: typing.List[TxIn], vout: typing.List[TxOut], locktime: int):
         self.version = version
         self.vin = vin
@@ -292,12 +294,29 @@ class Transaction:
             'locktime': self.locktime,
         }
 
-    def serialize(self):
-        # BIP-0144 defines new messages and serialization formats for propagation of transactions and blocks committing
-        # to segregated witness structures.
-        # See: https://github.com/bitcoin/bips/blob/master/bip-0144.mediawiki
+    def serialize_legacy(self):
         data = bytearray()
-        data.extend(bytearray([self.version, 0x00, 0x00, 0x00]))
+        data.extend(self.version.to_bytes(4, 'little'))
+        data.extend(compact_size_encode(len(self.vin)))
+        for i in self.vin:
+            # Why does bitcoin core print sha256 hashes (uint256) bytes in reverse order?
+            # See: https://bitcoin.stackexchange.com/questions/116730
+            data.extend(i.out_point.txid[::-1])
+            data.extend(i.out_point.vout.to_bytes(4, 'little'))
+            data.extend(compact_size_encode(len(i.script_sig)))
+            data.extend(i.script_sig)
+            data.extend(i.sequence.to_bytes(4, 'little'))
+        data.extend(compact_size_encode(len(self.vout)))
+        for o in self.vout:
+            data.extend(o.value.to_bytes(8, 'little'))
+            data.extend(compact_size_encode(len(o.script_pubkey)))
+            data.extend(o.script_pubkey)
+        data.extend(self.locktime.to_bytes(4, 'little'))
+        return data
+
+    def serialize_segwit(self):
+        data = bytearray()
+        data.extend(self.version.to_bytes(4, 'little'))
         data.append(0x00)
         data.append(0x01)
         data.extend(compact_size_encode(len(self.vin)))
@@ -321,8 +340,35 @@ class Transaction:
         data.extend(self.locktime.to_bytes(4, 'little'))
         return data
 
+    def serialize(self):
+        # If any inputs have nonempty witnesses, the entire transaction is serialized in the BIP141 Segwit format which
+        # includes a list of witnesses.
+        # See: https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki
+        if any([e.witness != bytearray() for e in self.vin]):
+            return self.serialize_segwit()
+        else:
+            return self.serialize_segwit()
+
     @staticmethod
-    def serialize_read(data: bytearray):
+    def serialize_read_legacy(data: bytearray):
+        reader = io.BytesIO(data)
+        tx = Transaction(0, [], [], 0)
+        tx.version = int.from_bytes(reader.read(4), 'little')
+        for _ in range(compact_size_decode_reader(reader)):
+            txid = bytearray(reader.read(32))[::-1]
+            vout = int.from_bytes(reader.read(4), 'little')
+            script_sig = bytearray(reader.read(compact_size_decode_reader(reader)))
+            sequence = int.from_bytes(reader.read(4), 'little')
+            tx.vin.append(TxIn(OutPoint(txid, vout), script_sig, sequence, bytearray()))
+        for _ in range(compact_size_decode_reader(reader)):
+            value = int.from_bytes(reader.read(8), 'little')
+            script_pubkey = bytearray(reader.read(compact_size_decode_reader(reader)))
+            tx.vout.append(TxOut(value, script_pubkey))
+        tx.locktime = int.from_bytes(reader.read(4), 'little')
+        return tx
+
+    @staticmethod
+    def serialize_read_segwit(data: bytearray):
         reader = io.BytesIO(data)
         tx = Transaction(0, [], [], 0)
         tx.version = int.from_bytes(reader.read(4), 'little')
@@ -344,10 +390,21 @@ class Transaction:
         tx.locktime = int.from_bytes(reader.read(4), 'little')
         return tx
 
+    @staticmethod
+    def serialize_read(data: bytearray):
+        if data[4] == 0x00:
+            return Transaction.serialize_read_segwit(data)
+        else:
+            return Transaction.serialize_read_legacy(data)
+
     def weight(self):
-        lightb = 2
-        lightb += len(compact_size_encode(len(self.vin)))
-        for i in self.vin:
-            lightb += len(compact_size_encode(len(i.witness)))
-            lightb += len(i.witness)
-        return 4 * len(self.serialize()) - 3 * lightb
+        data = self.serialize()
+        size_segwit = 0
+        if data[4] == 0x00 and data[5] == 0x01:
+            size_segwit += 2
+            size_segwit += len(compact_size_encode(len(self.vin)))
+            for i in self.vin:
+                size_segwit += len(compact_size_encode(len(i.witness)))
+                size_segwit += len(i.witness)
+        size_legacy = len(data) - size_segwit
+        return size_legacy * 4 + size_segwit * 1

@@ -17,7 +17,7 @@ $ python -m pip install --editable . --config-settings editable_mode=strict
 
 ## Usage
 
-**example/addrr.py**
+**example/addr.py**
 
 Calculate the address from a private key.
 
@@ -41,10 +41,16 @@ $ cp -R bitcoin-27.0 ~/app/bitcoin # Install to the target location.
 
 $ mkdir ~/.bitcoin
 $ echo "chain=regtest" >> ~/.bitcoin/bitcoin.conf
+$ echo "deprecatedrpc=create_bdb" >> ~/.bitcoin/bitcoin.conf
 $ echo "rpcpassword=pass" >> ~/.bitcoin/bitcoin.conf
 $ echo "rpcuser=user" >> ~/.bitcoin/bitcoin.conf
+$ echo "txindex=1" >> ~/.bitcoin/bitcoin.conf
 
 $ bitcoind
+$ bitcoin-cli -named createwallet wallet_name=main descriptors=false load_on_startup=true
+$ bitcoin-cli importaddress mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r
+$ bitcoin-cli generatetoaddress 101 mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r
+$ bitcoin-cli importaddress mg8Jz5776UdyiYcBb9Z873NTozEiADRW5H
 ```
 
 ## License
