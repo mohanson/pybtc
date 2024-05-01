@@ -398,9 +398,13 @@ class Transaction:
             return Transaction.serialize_read_legacy(data)
 
     def weight(self):
-        lightb = 2
-        lightb += len(compact_size_encode(len(self.vin)))
-        for i in self.vin:
-            lightb += len(compact_size_encode(len(i.witness)))
-            lightb += len(i.witness)
-        return 4 * len(self.serialize()) - 3 * lightb
+        data = self.serialize()
+        size_segwit = 0
+        if data[4] == 0x00 and data[5] == 0x01:
+            size_segwit += 2
+            size_segwit += len(compact_size_encode(len(self.vin)))
+            for i in self.vin:
+                size_segwit += len(compact_size_encode(len(i.witness)))
+                size_segwit += len(i.witness)
+        size_legacy = len(data) - size_segwit
+        return size_legacy * 4 + size_segwit * 1
