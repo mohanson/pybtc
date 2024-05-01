@@ -347,7 +347,7 @@ class Transaction:
         if any([e.witness != bytearray() for e in self.vin]):
             return self.serialize_segwit()
         else:
-            return self.serialize_segwit()
+            return self.serialize_legacy()
 
     @staticmethod
     def serialize_read_legacy(data: bytearray):
