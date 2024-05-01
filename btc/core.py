@@ -350,7 +350,25 @@ class Transaction:
             return self.serialize_segwit()
 
     @staticmethod
-    def serialize_read(data: bytearray):
+    def serialize_read_legacy(data: bytearray):
+        reader = io.BytesIO(data)
+        tx = Transaction(0, [], [], 0)
+        tx.version = int.from_bytes(reader.read(4), 'little')
+        for _ in range(compact_size_decode_reader(reader)):
+            txid = bytearray(reader.read(32))[::-1]
+            vout = int.from_bytes(reader.read(4), 'little')
+            script_sig = bytearray(reader.read(compact_size_decode_reader(reader)))
+            sequence = int.from_bytes(reader.read(4), 'little')
+            tx.vin.append(TxIn(OutPoint(txid, vout), script_sig, sequence, bytearray()))
+        for _ in range(compact_size_decode_reader(reader)):
+            value = int.from_bytes(reader.read(8), 'little')
+            script_pubkey = bytearray(reader.read(compact_size_decode_reader(reader)))
+            tx.vout.append(TxOut(value, script_pubkey))
+        tx.locktime = int.from_bytes(reader.read(4), 'little')
+        return tx
+
+    @staticmethod
+    def serialize_read_segwit(data: bytearray):
         reader = io.BytesIO(data)
         tx = Transaction(0, [], [], 0)
         tx.version = int.from_bytes(reader.read(4), 'little')
@@ -371,6 +389,13 @@ class Transaction:
             tx.vin[i].witness = witness
         tx.locktime = int.from_bytes(reader.read(4), 'little')
         return tx
+
+    @staticmethod
+    def serialize_read(data: bytearray):
+        if data[4] == 0x00:
+            return Transaction.serialize_read_segwit(data)
+        else:
+            return Transaction.serialize_read_legacy(data)
 
     def weight(self):
         lightb = 2
