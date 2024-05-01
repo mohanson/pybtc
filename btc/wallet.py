@@ -24,11 +24,27 @@ class WalletUtxo:
         }
 
 
+class WalletUtxoSearchFromBitcoinCore:
+    def __init__(self):
+        pass
+
+    def unspent(self, addr: str) -> typing.List[WalletUtxo]:
+        r = []
+        for e in btc.rpc.list_unspent([addr]):
+            out_point = btc.core.OutPoint(bytearray.fromhex(e['txid']), e['vout'])
+            value = e['amount'] * btc.denomination.bitcoin
+            value = int(value.to_integral_exact())
+            wallet_utxo = WalletUtxo(out_point, value)
+            r.append(wallet_utxo)
+        return r
+
+
 class Wallet:
     def __init__(self, prikey: int):
         self.prikey = btc.core.PriKey(prikey)
         self.pubkey = self.prikey.pubkey()
         self.addr = btc.core.address_p2pkh(self.pubkey)
+        self.utxo = WalletUtxoSearchFromBitcoinCore()
 
     def __repr__(self):
         return json.dumps(self.json())
@@ -51,11 +67,4 @@ class Wallet:
         }
 
     def unspent(self) -> typing.List[WalletUtxo]:
-        r = []
-        for e in btc.rpc.list_unspent([self.addr]):
-            out_point = btc.core.OutPoint(bytearray.fromhex(e['txid']), e['vout'])
-            value = e['amount'] * btc.denomination.bitcoin
-            value = int(value.to_integral_exact())
-            wallet_utxo = WalletUtxo(out_point, value)
-            r.append(wallet_utxo)
-        return r
+        return self.utxo.unspent(self.addr)
