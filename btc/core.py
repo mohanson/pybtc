@@ -267,6 +267,8 @@ class TxOut:
 
 
 class Transaction:
+    # Referring to the design of Bitcoin core.
+    # See: https://github.com/bitcoin/bitcoin/blob/master/src/primitives/transaction.h
     def __init__(self, version: int, vin: typing.List[TxIn], vout: typing.List[TxOut], locktime: int):
         self.version = version
         self.vin = vin
