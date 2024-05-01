@@ -299,9 +299,7 @@ class Transaction:
         data.extend(self.version.to_bytes(4, 'little'))
         data.extend(compact_size_encode(len(self.vin)))
         for i in self.vin:
-            # Why does bitcoin core print sha256 hashes (uint256) bytes in reverse order?
-            # See: https://bitcoin.stackexchange.com/questions/116730
-            data.extend(i.out_point.txid[::-1])
+            data.extend(i.out_point.txid)
             data.extend(i.out_point.vout.to_bytes(4, 'little'))
             data.extend(compact_size_encode(len(i.script_sig)))
             data.extend(i.script_sig)
@@ -321,9 +319,7 @@ class Transaction:
         data.append(0x01)
         data.extend(compact_size_encode(len(self.vin)))
         for i in self.vin:
-            # Why does bitcoin core print sha256 hashes (uint256) bytes in reverse order?
-            # See: https://bitcoin.stackexchange.com/questions/116730
-            data.extend(i.out_point.txid[::-1])
+            data.extend(i.out_point.txid)
             data.extend(i.out_point.vout.to_bytes(4, 'little'))
             data.extend(compact_size_encode(len(i.script_sig)))
             data.extend(i.script_sig)
@@ -355,7 +351,7 @@ class Transaction:
         tx = Transaction(0, [], [], 0)
         tx.version = int.from_bytes(reader.read(4), 'little')
         for _ in range(compact_size_decode_reader(reader)):
-            txid = bytearray(reader.read(32))[::-1]
+            txid = bytearray(reader.read(32))
             vout = int.from_bytes(reader.read(4), 'little')
             script_sig = bytearray(reader.read(compact_size_decode_reader(reader)))
             sequence = int.from_bytes(reader.read(4), 'little')
@@ -375,7 +371,7 @@ class Transaction:
         assert reader.read(1)[0] == 0x00
         assert reader.read(1)[0] == 0x01
         for _ in range(compact_size_decode_reader(reader)):
-            txid = bytearray(reader.read(32))[::-1]
+            txid = bytearray(reader.read(32))
             vout = int.from_bytes(reader.read(4), 'little')
             script_sig = bytearray(reader.read(compact_size_decode_reader(reader)))
             sequence = int.from_bytes(reader.read(4), 'little')
@@ -396,6 +392,9 @@ class Transaction:
             return Transaction.serialize_read_segwit(data)
         else:
             return Transaction.serialize_read_legacy(data)
+
+    def txid(self):
+        return hash256(self.serialize_legacy())
 
     def weight(self):
         data = self.serialize()

@@ -130,3 +130,4 @@ def test_transaction():
     assert len(tx.vout) == 2
     assert tx.locktime == 0
     assert tx.weight() == 569
+    assert tx.txid() == bytearray.fromhex('7761f9d1ecbcf9c129802aaadfdfec38419aa441519d94bc5b21968630006246')
