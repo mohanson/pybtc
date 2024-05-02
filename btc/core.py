@@ -31,6 +31,11 @@ class PriKey:
         pubkey = btc.secp256k1.G * btc.secp256k1.Fr(self.n)
         return PubKey(pubkey.x.x, pubkey.y.x)
 
+    def sign(self, data: bytearray):
+        assert len(data) == 32
+        m = btc.secp256k1.Fr(int.from_bytes(data))
+        return btc.ecdsa.sign(btc.secp256k1.Fr(self.n), m)
+
     def wif(self):
         # See https://en.bitcoin.it/wiki/Wallet_import_format
         data = bytearray()
