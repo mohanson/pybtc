@@ -35,7 +35,18 @@ class PriKey:
         assert len(data) == 32
         m = btc.secp256k1.Fr(int.from_bytes(data))
         r, s, v = btc.ecdsa.sign(btc.secp256k1.Fr(self.n), m)
-        return bytearray([v]) + bytearray(r.x.to_bytes(32)) + bytearray(s.x.to_bytes(32))
+        for _ in range(8):
+            r, s, v = btc.ecdsa.sign(btc.secp256k1.Fr(self.n), m)
+            if v > 1:
+                continue
+            # We require that the S value inside ECDSA signatures is at most the curve order divided by 2 (essentially
+            # restricting this value to its lower half range).
+            # See: https://github.com/bitcoin/bips/blob/master/bip-0146.mediawiki
+            if s.x * 2 >= btc.secp256k1.N:
+                s = -s
+                v = 1 - v
+            return bytearray([v]) + bytearray(r.x.to_bytes(32)) + bytearray(s.x.to_bytes(32))
+        raise Exception
 
     def wif(self):
         # See https://en.bitcoin.it/wiki/Wallet_import_format
