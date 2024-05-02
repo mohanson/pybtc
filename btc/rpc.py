@@ -43,4 +43,8 @@ def get_tx_out(txid: str, vout: int) -> typing.Dict:
 
 
 def list_unspent(addresses: typing.List[str]) -> typing.List:
-    return call('listunspent', [1, 9999999, addresses])
+    return call('listunspent', [0, 9999999, addresses])
+
+
+def send_raw_transaction(tx: str) -> str:
+    return call('sendrawtransaction', [tx])
