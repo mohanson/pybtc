@@ -20,6 +20,7 @@ develop = ObjectDict({
         'p2pkh': 0x6f,
         'p2sh': 0xc4,
         'bech32': 'bcrt',
+        'wif': 0xef,
     }),
 })
 
@@ -34,6 +35,7 @@ mainnet = ObjectDict({
         'p2pkh': 0x00,
         'p2sh': 0x05,
         'bech32': 'bc',
+        'wif': 0x80,
     }),
 })
 
@@ -48,6 +50,7 @@ testnet = ObjectDict({
         'p2pkh': 0x6f,
         'p2sh': 0xc4,
         'bech32': 'tb',
+        'wif': 0xef,
     }),
 })
 

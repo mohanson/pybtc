@@ -51,10 +51,7 @@ class PriKey:
     def wif(self):
         # See https://en.bitcoin.it/wiki/Wallet_import_format
         data = bytearray()
-        if btc.config.current == btc.config.mainnet:
-            data.append(0x80)
-        else:
-            data.append(0xef)
+        data.append(btc.config.current.prefix.wif)
         data.extend(self.n.to_bytes(32))
         data.append(0x01)
         checksum = hash256(data)[:4]
@@ -64,10 +61,7 @@ class PriKey:
     @staticmethod
     def wif_read(data: str):
         data = btc.base58.decode(data)
-        if btc.config.current == btc.config.mainnet:
-            assert data[0] == 0x80
-        else:
-            assert data[0] == 0xef
+        assert data[0] == btc.config.current.prefix.wif
         assert hash256(data[:-4])[:4] == data[-4:]
         return PriKey(int.from_bytes(data[1:33]))
 
