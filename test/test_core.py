@@ -108,10 +108,11 @@ def test_compact_size():
 
 def test_der():
     for _ in range(256):
-        b = bytearray([0x01]) + bytearray(random.randbytes(64))
-        s = btc.core.der_encode(b)
-        f = btc.core.der_decode(s)
-        assert b == f
+        r0 = btc.secp256k1.Fr(random.randint(0, btc.secp256k1.N - 1))
+        s0 = btc.secp256k1.Fr(random.randint(0, btc.secp256k1.N - 1))
+        r1, s1 = btc.core.der_decode(btc.core.der_encode(r0, s0))
+        assert r0 == r1
+        assert s0 == s1
 
 
 def test_transaction():

@@ -1,5 +1,6 @@
 import btc.config
 import btc.ripemd160
+import btc.secp256k1
 import hashlib
 import math
 import io
@@ -52,7 +53,7 @@ class PriKey:
             if s.x * 2 >= btc.secp256k1.N:
                 s = -s
                 v = 1 - v
-            return bytearray([v]) + bytearray(r.x.to_bytes(32)) + bytearray(s.x.to_bytes(32))
+            return r, s, v
         raise Exception
 
     def wif(self):
@@ -469,35 +470,34 @@ def script_pubkey_p2pkh(addr: str) -> bytearray:
     return bytearray([0x76, 0xa9, 0x14]) + hash + bytearray([0x88, 0xac])
 
 
-def der_encode(sign: bytearray) -> bytearray:
+def der_encode(r: btc.secp256k1.Fr, s: btc.secp256k1.Fr) -> bytearray:
     # DER encoding: https://github.com/bitcoin/bips/blob/master/bip-0062.mediawiki#der-encoding
     body = bytearray()
     body.append(0x02)
-    r = sign[0x01:0x21].lstrip(bytearray([0x00]))
+    r = r.x.to_bytes(32).lstrip(bytearray([0x00]))
     if r[0] & 0x80:
         r = bytearray([0x00]) + r
     body.append(len(r))
     body.extend(r)
     body.append(0x02)
-    s = sign[0x21:0x41].lstrip(bytearray([0x00]))
+    s = s.x.to_bytes(32).lstrip(bytearray([0x00]))
     if s[0] & 0x80:
         s = bytearray([0x00]) + s
     body.append(len(s))
     body.extend(s)
     head = bytearray([0x30, len(body)])
-    return head + body + bytearray([0x01])
+    return head + body
 
 
-def der_decode(sign: bytearray) -> bytearray:
+def der_decode(sign: bytearray) -> typing.Tuple[btc.secp256k1.Fr, btc.secp256k1.Fr]:
     assert sign[0] == 0x30
-    assert sign[1] == len(sign) - 3
+    assert sign[1] == len(sign) - 2
     assert sign[2] == 0x02
     rlen = sign[3]
-    r = int.from_bytes(sign[4:4+rlen])
+    r = btc.secp256k1.Fr(int.from_bytes(sign[4:4+rlen]))
     f = 4 + rlen
     assert sign[f] == 0x02
     slen = sign[f+1]
     f = f + 2
-    s = int.from_bytes(sign[f:f+slen])
-    f = f + slen
-    return bytearray([sign[f]]) + bytearray(r.to_bytes(32)) + bytearray(s.to_bytes(32))
+    s = btc.secp256k1.Fr(int.from_bytes(sign[f:f+slen]))
+    return r, s
