@@ -7,6 +7,12 @@ import json
 import typing
 
 
+sighash_all = 0x01
+sighash_none = 0x02
+sighash_single = 0x03
+sighash_anyone_can_pay = 0x80
+
+
 def hash160(data: bytearray) -> bytearray:
     return bytearray(btc.ripemd160.ripemd160(hashlib.sha256(data).digest()).digest())
 
