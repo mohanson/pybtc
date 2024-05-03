@@ -81,7 +81,7 @@ class Wallet:
         for utxo in self.unspent():
             tx.vin.append(btc.core.TxIn(utxo.out_point, bytearray(107), 0xffffffff, bytearray()))
             sender_value += utxo.value
-            change_value = sender_value - accept_value - (tx.weight() // 4 * fr)
+            change_value = sender_value - accept_value - tx.vbytes() * fr
             # How was the dust limit of 546 satoshis was chosen?
             # See: https://bitcoin.stackexchange.com/questions/86068
             if change_value >= 546:
@@ -105,7 +105,7 @@ class Wallet:
         for utxo in self.unspent():
             tx.vin.append(btc.core.TxIn(utxo.out_point, bytearray(107), 0xffffffff, bytearray()))
             sender_value += utxo.value
-        accept_value = sender_value - (tx.weight() // 4 * fr)
+        accept_value = sender_value - tx.vbytes() * fr
         assert accept_value >= 546
         tx.vout[0].value = accept_value
         for i, e in enumerate(tx.vin):

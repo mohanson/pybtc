@@ -1,6 +1,7 @@
 import btc.config
 import btc.ripemd160
 import hashlib
+import math
 import io
 import json
 import typing
@@ -437,6 +438,9 @@ class Transaction:
 
     def txid(self):
         return hash256(self.serialize_legacy())
+
+    def vbytes(self):
+        return math.ceil(self.weight() / 4.0)
 
     def weight(self):
         data = self.serialize()
