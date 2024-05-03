@@ -1,7 +1,9 @@
 import btc
 import decimal
+import itertools
 import random
 import requests
+import time
 import typing
 
 # Doc: https://developer.bitcoin.org/reference/rpc/
@@ -46,6 +48,10 @@ def get_block_count() -> int:
     return call('getblockcount', [])
 
 
+def get_raw_transaction(txid: str, verbose: bool = False) -> typing.Dict:
+    return call('getrawtransaction', [txid, verbose])
+
+
 def get_tx_out(txid: str, vout: int) -> typing.Dict:
     return call('gettxout', [txid, vout])
 
@@ -56,3 +62,13 @@ def list_unspent(addresses: typing.List[str]) -> typing.List:
 
 def send_raw_transaction(tx: str) -> str:
     return call('sendrawtransaction', [tx])
+
+
+def wait(txid: str):
+    if btc.config.current == btc.config.develop:
+        return
+    for _ in itertools.repeat(0):
+        r = get_raw_transaction(txid, True)
+        if r['in_active_chain']:
+            break
+        time.sleep(1)

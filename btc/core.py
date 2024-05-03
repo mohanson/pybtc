@@ -297,53 +297,24 @@ class Transaction:
             self.locktime == other.locktime,
         ])
 
-    def digest_legacy(self):
+    def digest_legacy(self, i: int):
         # The legacy signing algorithm is used to create signatures that will unlock non-segwit locking scripts.
         # See: https://learnmeabitcoin.com/technical/keys/signature/
         data = bytearray()
         data.extend(self.version.to_bytes(4, 'little'))
         data.extend(compact_size_encode(len(self.vin)))
-        for i in self.vin:
-            data.extend(i.out_point.txid)
-            data.extend(i.out_point.vout.to_bytes(4, 'little'))
+        for j, e in enumerate(self.vin):
+            data.extend(e.out_point.txid)
+            data.extend(e.out_point.vout.to_bytes(4, 'little'))
             # Put the script_pubkey as a placeholder in the script_sig.
-            tx_out_result = btc.rpc.get_tx_out(i.out_point.txid[::-1].hex(), i.out_point.vout)
-            script_pubkey = bytearray.fromhex(tx_out_result['scriptPubKey']['hex'])
-            data.extend(compact_size_encode(len(script_pubkey)))
-            data.extend(script_pubkey)
-            data.extend(i.sequence.to_bytes(4, 'little'))
-        data.extend(compact_size_encode(len(self.vout)))
-        for o in self.vout:
-            data.extend(o.value.to_bytes(8, 'little'))
-            data.extend(compact_size_encode(len(o.script_pubkey)))
-            data.extend(o.script_pubkey)
-        data.extend(self.locktime.to_bytes(4, 'little'))
-        # Append signature hash type to transaction data. The most common is SIGHASH_ALL (0x01), which indicates that
-        # the signature covers all of the inputs and outputs in the transaction. This means that nobody else can add
-        # any additional inputs or outputs to it later on.
-        # The sighash when appended to the transaction data is 4 bytes and in little-endian byte order.
-        data.extend(bytearray([0x01, 0x00, 0x00, 0x00]))
-        return hash256(data)
-
-    def digest_legacy2(self, txini: int):
-        # The legacy signing algorithm is used to create signatures that will unlock non-segwit locking scripts.
-        # See: https://learnmeabitcoin.com/technical/keys/signature/
-        data = bytearray()
-        data.extend(self.version.to_bytes(4, 'little'))
-        data.extend(compact_size_encode(len(self.vin)))
-        for ii, i in enumerate(self.vin):
-            data.extend(i.out_point.txid)
-            data.extend(i.out_point.vout.to_bytes(4, 'little'))
-            if ii == txini:
-                # Put the script_pubkey as a placeholder in the script_sig.
-                tx_out_result = btc.rpc.get_tx_out(i.out_point.txid[::-1].hex(), i.out_point.vout)
+            if i == j:
+                tx_out_result = btc.rpc.get_tx_out(e.out_point.txid[::-1].hex(), e.out_point.vout)
                 script_pubkey = bytearray.fromhex(tx_out_result['scriptPubKey']['hex'])
                 data.extend(compact_size_encode(len(script_pubkey)))
                 data.extend(script_pubkey)
             else:
                 data.extend(compact_size_encode(0))
-                data.extend(bytearray())
-            data.extend(i.sequence.to_bytes(4, 'little'))
+            data.extend(e.sequence.to_bytes(4, 'little'))
         data.extend(compact_size_encode(len(self.vout)))
         for o in self.vout:
             data.extend(o.value.to_bytes(8, 'little'))
