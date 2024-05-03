@@ -1,4 +1,5 @@
 import btc
+import random
 
 
 def test_hash160():
@@ -103,6 +104,14 @@ def test_compact_size():
     ]:
         assert btc.core.compact_size_encode(n) == b
         assert btc.core.compact_size_decode(b) == n
+
+
+def test_der():
+    for _ in range(256):
+        b = bytearray([0x01]) + bytearray(random.randbytes(64))
+        s = btc.core.der_encode(b)
+        f = btc.core.der_decode(s)
+        assert b == f
 
 
 def test_transaction():

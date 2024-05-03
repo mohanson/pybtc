@@ -480,3 +480,18 @@ def der_encode(sign: bytearray) -> bytearray:
     body.extend(s)
     head = bytearray([0x30, len(body)])
     return head + body + bytearray([0x01])
+
+
+def der_decode(sign: bytearray) -> bytearray:
+    assert sign[0] == 0x30
+    assert sign[1] == len(sign) - 3
+    assert sign[2] == 0x02
+    rlen = sign[3]
+    r = int.from_bytes(sign[4:4+rlen])
+    f = 4 + rlen
+    assert sign[f] == 0x02
+    slen = sign[f+1]
+    f = f + 2
+    s = int.from_bytes(sign[f:f+slen])
+    f = f + slen
+    return bytearray([sign[f]]) + bytearray(r.to_bytes(32)) + bytearray(s.to_bytes(32))
