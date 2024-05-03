@@ -226,6 +226,9 @@ class OutPoint:
             self.vout == other.vout,
         ])
 
+    def copy(self):
+        return OutPoint(self.txid.copy(), self.vout)
+
     def json(self):
         return {
             'txid': f'0x{self.txid.hex()}',
@@ -253,6 +256,9 @@ class TxIn:
             self.witness == other.witness,
         ])
 
+    def copy(self):
+        return TxIn(self.out_point.copy(), self.script_sig.copy(), self.sequence, self.witness.copy())
+
     def json(self):
         return {
             'out_point': self.out_point.json(),
@@ -277,6 +283,9 @@ class TxOut:
             self.value == other.value,
             self.script_pubkey == other.script_pubkey,
         ])
+
+    def copy(self):
+        return TxOut(self.value, self.script_pubkey.copy())
 
     def json(self):
         return {
@@ -305,30 +314,28 @@ class Transaction:
             self.locktime == other.locktime,
         ])
 
-    def digest_legacy(self, i: int):
+    def copy(self):
+        return Transaction(self.version, [i.copy() for i in self.vin], [o.copy() for o in self.vout], self.locktime)
+
+    def digest_legacy(self, i: int, sighash: int):
         # The legacy signing algorithm is used to create signatures that will unlock non-segwit locking scripts.
         # See: https://learnmeabitcoin.com/technical/keys/signature/
-        data = bytearray()
-        data.extend(self.version.to_bytes(4, 'little'))
-        data.extend(compact_size_encode(len(self.vin)))
-        for j, e in enumerate(self.vin):
-            data.extend(e.out_point.txid)
-            data.extend(e.out_point.vout.to_bytes(4, 'little'))
-            # Put the script_pubkey as a placeholder in the script_sig.
-            if i == j:
-                tx_out_result = btc.rpc.get_tx_out(e.out_point.txid[::-1].hex(), e.out_point.vout)
-                script_pubkey = bytearray.fromhex(tx_out_result['scriptPubKey']['hex'])
-                data.extend(compact_size_encode(len(script_pubkey)))
-                data.extend(script_pubkey)
-            else:
-                data.extend(compact_size_encode(0))
-            data.extend(e.sequence.to_bytes(4, 'little'))
-        data.extend(compact_size_encode(len(self.vout)))
-        for o in self.vout:
-            data.extend(o.value.to_bytes(8, 'little'))
-            data.extend(compact_size_encode(len(o.script_pubkey)))
-            data.extend(o.script_pubkey)
-        data.extend(self.locktime.to_bytes(4, 'little'))
+        tx = self.copy()
+        for e in tx.vin:
+            e.script_sig = bytearray()
+        # Put the script_pubkey as a placeholder in the script_sig.
+        tx_out_result = btc.rpc.get_tx_out(tx.vin[i].out_point.txid[::-1].hex(), tx.vin[i].out_point.vout)
+        script_pubkey = bytearray.fromhex(tx_out_result['scriptPubKey']['hex'])
+        tx.vin[i].script_sig = script_pubkey
+        if sighash & 0x80:
+            tx.vin = [tx.vin[i]]
+        if sighash & 0x7f == sighash_all:
+            pass
+        if sighash & 0x7f == sighash_none:
+            tx.vout = []
+        if sighash & 0x7f == sighash_single:
+            tx.vout = [tx.vout[i]]
+        data = tx.serialize_legacy()
         # Append signature hash type to transaction data. The most common is SIGHASH_ALL (0x01), which indicates that
         # the signature covers all of the inputs and outputs in the transaction. This means that nobody else can add
         # any additional inputs or outputs to it later on.

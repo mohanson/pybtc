@@ -89,9 +89,9 @@ class Wallet:
         assert change_value >= 546
         tx.vout[1].value = change_value
         for i, e in enumerate(tx.vin):
-            r, s, _ = self.prikey.sign(tx.digest_legacy(i))
-            sign = btc.core.der_encode(r, s) + bytearray([btc.core.sighash_all])
-            e.script_sig = bytearray([len(sign)]) + sign + bytearray([33]) + self.pubkey.sec()
+            r, s, _ = self.prikey.sign(tx.digest_legacy(i, btc.core.sighash_all))
+            g = btc.core.der_encode(r, s) + bytearray([btc.core.sighash_all])
+            e.script_sig = bytearray([len(g)]) + g + bytearray([33]) + self.pubkey.sec()
         txid = bytearray.fromhex(btc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
         return txid
 
@@ -110,9 +110,9 @@ class Wallet:
         assert accept_value >= 546
         tx.vout[0].value = accept_value
         for i, e in enumerate(tx.vin):
-            r, s, _ = self.prikey.sign(tx.digest_legacy(i))
-            sign = btc.core.der_encode(r, s) + bytearray([btc.core.sighash_all])
-            e.script_sig = bytearray([len(sign)]) + sign + bytearray([33]) + self.pubkey.sec()
+            r, s, _ = self.prikey.sign(tx.digest_legacy(i, btc.core.sighash_all))
+            g = btc.core.der_encode(r, s) + bytearray([btc.core.sighash_all])
+            e.script_sig = bytearray([len(g)]) + g + bytearray([33]) + self.pubkey.sec()
         txid = bytearray.fromhex(btc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
         return txid
 
