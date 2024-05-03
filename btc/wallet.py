@@ -44,6 +44,7 @@ class Wallet:
         self.prikey = btc.core.PriKey(prikey)
         self.pubkey = self.prikey.pubkey()
         self.addr = btc.core.address_p2pkh(self.pubkey)
+        self.script = btc.core.script_pubkey_p2pkh(self.addr)
         self.utxo = WalletUtxoSearchFromBitcoinCore()
 
     def __repr__(self):
@@ -65,6 +66,59 @@ class Wallet:
             'pubkey': self.pubkey.json(),
             'addr': self.addr,
         }
+
+    def sign(self, tx: btc.core.Transaction):
+        for i, e in enumerate(tx.vin):
+            sign = btc.core.der_encode(self.prikey.sign(tx.digest_legacy2(i)))
+            script_sig = bytearray()
+            script_sig.append(len(sign))
+            script_sig.extend(sign)
+            script_sig.append(33)
+            script_sig.extend(self.pubkey.sec())
+            e.script_sig = script_sig
+
+    def transfer(self, script: bytearray, value: int):
+        sender_value = 0
+        accept_value = value
+        accept_script = script
+        change_value = 0
+        change_script = self.script
+        fr = btc.rpc.estimates_mart_fee(6)['feerate'] * btc.denomination.bitcoin
+        fr = int(fr.to_integral_exact()) // 1000
+        tx = btc.core.Transaction(2, [], [], 0)
+        tx.vout.append(btc.core.TxOut(accept_value, accept_script))
+        tx.vout.append(btc.core.TxOut(change_value, change_script))
+        for utxo in self.unspent():
+            tx.vin.append(btc.core.TxIn(utxo.out_point, bytearray(107), 0xffffffff, bytearray()))
+            sender_value += utxo.value
+            change_value = sender_value - accept_value - (tx.weight() // 4 * fr)
+            # How was the dust limit of 546 satoshis was chosen?
+            # See: https://bitcoin.stackexchange.com/questions/86068
+            if change_value >= 546:
+                break
+        assert change_value >= 546
+        tx.vout[1].value = change_value
+        self.sign(tx)
+        txid = bytearray.fromhex(btc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
+        return txid
+
+    def transfer_all(self, script: bytearray):
+        sender_value = 0
+        accept_value = 0
+        accept_script = script
+        fr = btc.rpc.estimates_mart_fee(6)['feerate'] * btc.denomination.bitcoin
+        fr = int(fr.to_integral_exact()) // 1000
+        tx = btc.core.Transaction(2, [], [], 0)
+        tx.vout.append(btc.core.TxOut(accept_value, accept_script))
+        for utxo in self.unspent():
+            tx.vin.append(btc.core.TxIn(utxo.out_point, bytearray(107), 0xffffffff, bytearray()))
+            sender_value += utxo.value
+        accept_value = sender_value - (tx.weight() // 4 * fr)
+        assert accept_value >= 546
+        tx.vout[0].value = accept_value
+        self.sign(tx)
+        txid = bytearray.fromhex(btc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
+        return txid
 
     def unspent(self) -> typing.List[WalletUtxo]:
         return self.utxo.unspent(self.addr)

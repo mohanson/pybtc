@@ -26,6 +26,14 @@ def decode_raw_transaction(tx: str) -> typing.Dict:
     return call('decoderawtransaction', [tx])
 
 
+def estimates_mart_fee(conf_target: int) -> typing.Dict:
+    # A mock is required on RegTest to allow this RPC to return meaningful data.
+    # See: https://github.com/bitcoin/bitcoin/issues/11500
+    if btc.config.current == btc.config.develop:
+        return {'feerate': decimal.Decimal('0.00001'), 'blocks': conf_target}
+    return call('estimatesmartfee', [conf_target])
+
+
 def generate_to_address(nblocks: int, address: str) -> typing.List[str]:
     return call('generatetoaddress', [nblocks, address])
 

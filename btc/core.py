@@ -297,6 +297,66 @@ class Transaction:
             self.locktime == other.locktime,
         ])
 
+    def digest_legacy(self):
+        # The legacy signing algorithm is used to create signatures that will unlock non-segwit locking scripts.
+        # See: https://learnmeabitcoin.com/technical/keys/signature/
+        data = bytearray()
+        data.extend(self.version.to_bytes(4, 'little'))
+        data.extend(compact_size_encode(len(self.vin)))
+        for i in self.vin:
+            data.extend(i.out_point.txid)
+            data.extend(i.out_point.vout.to_bytes(4, 'little'))
+            # Put the script_pubkey as a placeholder in the script_sig.
+            tx_out_result = btc.rpc.get_tx_out(i.out_point.txid[::-1].hex(), i.out_point.vout)
+            script_pubkey = bytearray.fromhex(tx_out_result['scriptPubKey']['hex'])
+            data.extend(compact_size_encode(len(script_pubkey)))
+            data.extend(script_pubkey)
+            data.extend(i.sequence.to_bytes(4, 'little'))
+        data.extend(compact_size_encode(len(self.vout)))
+        for o in self.vout:
+            data.extend(o.value.to_bytes(8, 'little'))
+            data.extend(compact_size_encode(len(o.script_pubkey)))
+            data.extend(o.script_pubkey)
+        data.extend(self.locktime.to_bytes(4, 'little'))
+        # Append signature hash type to transaction data. The most common is SIGHASH_ALL (0x01), which indicates that
+        # the signature covers all of the inputs and outputs in the transaction. This means that nobody else can add
+        # any additional inputs or outputs to it later on.
+        # The sighash when appended to the transaction data is 4 bytes and in little-endian byte order.
+        data.extend(bytearray([0x01, 0x00, 0x00, 0x00]))
+        return hash256(data)
+
+    def digest_legacy2(self, txini: int):
+        # The legacy signing algorithm is used to create signatures that will unlock non-segwit locking scripts.
+        # See: https://learnmeabitcoin.com/technical/keys/signature/
+        data = bytearray()
+        data.extend(self.version.to_bytes(4, 'little'))
+        data.extend(compact_size_encode(len(self.vin)))
+        for ii, i in enumerate(self.vin):
+            data.extend(i.out_point.txid)
+            data.extend(i.out_point.vout.to_bytes(4, 'little'))
+            if ii == txini:
+                # Put the script_pubkey as a placeholder in the script_sig.
+                tx_out_result = btc.rpc.get_tx_out(i.out_point.txid[::-1].hex(), i.out_point.vout)
+                script_pubkey = bytearray.fromhex(tx_out_result['scriptPubKey']['hex'])
+                data.extend(compact_size_encode(len(script_pubkey)))
+                data.extend(script_pubkey)
+            else:
+                data.extend(compact_size_encode(0))
+                data.extend(bytearray())
+            data.extend(i.sequence.to_bytes(4, 'little'))
+        data.extend(compact_size_encode(len(self.vout)))
+        for o in self.vout:
+            data.extend(o.value.to_bytes(8, 'little'))
+            data.extend(compact_size_encode(len(o.script_pubkey)))
+            data.extend(o.script_pubkey)
+        data.extend(self.locktime.to_bytes(4, 'little'))
+        # Append signature hash type to transaction data. The most common is SIGHASH_ALL (0x01), which indicates that
+        # the signature covers all of the inputs and outputs in the transaction. This means that nobody else can add
+        # any additional inputs or outputs to it later on.
+        # The sighash when appended to the transaction data is 4 bytes and in little-endian byte order.
+        data.extend(bytearray([0x01, 0x00, 0x00, 0x00]))
+        return hash256(data)
+
     def json(self):
         return {
             'version': self.version,
@@ -418,3 +478,30 @@ class Transaction:
                 size_segwit += len(i.witness)
         size_legacy = len(data) - size_segwit
         return size_legacy * 4 + size_segwit * 1
+
+
+def script_pubkey_p2pkh(addr: str) -> bytearray:
+    data = btc.base58.decode(addr)
+    assert data[0] == btc.config.current.prefix.p2pkh
+    hash = data[0x01:0x15]
+    assert btc.core.hash256(data[0x00:0x15])[:4] == data[0x15:0x19]
+    return bytearray([0x76, 0xa9, 0x14]) + hash + bytearray([0x88, 0xac])
+
+
+def der_encode(sign: bytearray) -> bytearray:
+    # DER encoding: https://github.com/bitcoin/bips/blob/master/bip-0062.mediawiki#der-encoding
+    body = bytearray()
+    body.append(0x02)
+    r = sign[0x01:0x21].lstrip(bytearray([0x00]))
+    if r[0] & 0x80:
+        r = bytearray([0x00]) + r
+    body.append(len(r))
+    body.extend(r)
+    body.append(0x02)
+    s = sign[0x21:0x41].lstrip(bytearray([0x00]))
+    if s[0] & 0x80:
+        s = bytearray([0x00]) + s
+    body.append(len(s))
+    body.extend(s)
+    head = bytearray([0x30, len(body)])
+    return head + body + bytearray([0x01])
