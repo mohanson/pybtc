@@ -340,7 +340,7 @@ class Transaction:
         # the signature covers all of the inputs and outputs in the transaction. This means that nobody else can add
         # any additional inputs or outputs to it later on.
         # The sighash when appended to the transaction data is 4 bytes and in little-endian byte order.
-        data.extend(bytearray([sighash_all, 0x00, 0x00, 0x00]))
+        data.extend(bytearray([sighash, 0x00, 0x00, 0x00]))
         return hash256(data)
 
     def json(self):
