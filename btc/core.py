@@ -371,8 +371,14 @@ class Transaction:
         data.extend(self.vin[i].out_point.txid)
         data.extend(self.vin[i].out_point.vout.to_bytes(4, 'little'))
         # 5. scriptCode of the input (serialized as scripts inside CTxOuts)
-        # 6. value of the output spent by this input (8-byte little endian)
         tx_out_result = btc.rpc.get_tx_out(self.vin[i].out_point.txid[::-1].hex(), self.vin[i].out_point.vout)
+        script_pubkey = bytearray.fromhex(tx_out_result['scriptPubKey']['hex'])
+        assert script_pubkey[0] == 0x00
+        assert script_pubkey[1] == 0x14
+        pubkey_hash = script_pubkey[0x02:0x16]
+        script_code = bytearray([0x19, 0x76, 0xa9, 0x14]) + pubkey_hash + bytearray([0x88, 0xac])
+        data.extend(script_code)
+        # 6. value of the output spent by this input (8-byte little endian)
         value = tx_out_result['value'] * btc.denomination.bitcoin
         value = int(value.to_integral_exact())
         data.extend(value.to_bytes(8, 'little'))
