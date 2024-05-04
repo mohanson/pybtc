@@ -343,6 +343,29 @@ class Transaction:
         data.extend(bytearray([sighash, 0x00, 0x00, 0x00]))
         return hash256(data)
 
+    def digest_segwit(self, i: int, sighash: int):
+        # See: https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki
+        data = bytearray()
+        # 1. nVersion of the transaction (4-byte little endian)
+        data.extend(self.version.to_bytes(4, 'little'))
+        # 2. hashPrevouts (32-byte hash)
+        # 3. hashSequence (32-byte hash)
+        # 4. outpoint (32-byte hash + 4-byte little endian)
+        for i in self.vin:
+            data.extend(i.out_point.txid)
+            data.extend(i.out_point.vout.to_bytes(4, 'little'))
+        # 5. scriptCode of the input (serialized as scripts inside CTxOuts)
+        # 6. value of the output spent by this input (8-byte little endian)
+        # 7. nSequence of the input (4-byte little endian)
+        for i in self.vin:
+            data.extend(i.sequence.to_bytes(4, 'little'))
+        # 8. hashOutputs (32-byte hash)
+        # 9. nLocktime of the transaction (4-byte little endian)
+        data.extend(self.locktime.to_bytes(4, 'little'))
+        # 10. sighash type of the signature (4-byte little endian)
+        data.extend(bytearray([sighash, 0x00, 0x00, 0x00]))
+        return hash256(data)
+
     def json(self):
         return {
             'version': self.version,
@@ -475,6 +498,19 @@ def script_pubkey_p2pkh(addr: str) -> bytearray:
     hash = data[0x01:0x15]
     assert btc.core.hash256(data[0x00:0x15])[:4] == data[0x15:0x19]
     return bytearray([0x76, 0xa9, 0x14]) + hash + bytearray([0x88, 0xac])
+
+
+def script_pubkey_p2sh(addr: str) -> bytearray:
+    data = btc.base58.decode(addr)
+    assert data[0] == btc.config.current.prefix.p2sh
+    hash = data[0x01:0x15]
+    assert btc.core.hash256(data[0x00:0x15])[:4] == data[0x15:0x19]
+    return bytearray([0xa9, 0x14]) + hash + bytearray([0x87])
+
+
+def script_pubkey_p2wpkh(addr: str) -> bytearray:
+    _, hash = btc.bech32.decode(btc.config.current.prefix.bech32, addr)
+    return bytearray([0x00, 0x14]) + hash
 
 
 def der_encode(r: btc.secp256k1.Fr, s: btc.secp256k1.Fr) -> bytearray:
