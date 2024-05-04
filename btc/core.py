@@ -327,13 +327,13 @@ class Transaction:
         tx_out_result = btc.rpc.get_tx_out(tx.vin[i].out_point.txid[::-1].hex(), tx.vin[i].out_point.vout)
         script_pubkey = bytearray.fromhex(tx_out_result['scriptPubKey']['hex'])
         tx.vin[i].script_sig = script_pubkey
-        if sighash & 0x80:
+        if sighash & sighash_anyone_can_pay:
             tx.vin = [tx.vin[i]]
-        if sighash & 0x7f == sighash_all:
+        if sighash & 0x1f == sighash_all:
             pass
-        if sighash & 0x7f == sighash_none:
+        if sighash & 0x1f == sighash_none:
             tx.vout = []
-        if sighash & 0x7f == sighash_single:
+        if sighash & 0x1f == sighash_single:
             tx.vout = [tx.vout[i]]
         data = tx.serialize_legacy()
         # Append signature hash type to transaction data. The most common is SIGHASH_ALL (0x01), which indicates that
