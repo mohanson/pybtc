@@ -3,8 +3,8 @@ import btc
 
 def test_wallet_transfer():
     btc.config.current = btc.config.develop
-    user = btc.wallet.Wallet(1)
-    mate = btc.wallet.Wallet(2)
+    user = btc.wallet.Wallet(1, btc.core.script_type_p2pkh)
+    mate = btc.wallet.Wallet(2, btc.core.script_type_p2pkh)
     value = btc.denomination.bitcoin
     value_old = mate.balance()
     txid = user.transfer(mate.script, value)

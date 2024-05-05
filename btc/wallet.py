@@ -40,7 +40,7 @@ class WalletUtxoSearchFromBitcoinCore:
 
 
 class Wallet:
-    def __init__(self, prikey: int, script_type: int = btc.core.script_type_p2pkh):
+    def __init__(self, prikey: int, script_type: int):
         assert script_type in [
             btc.core.script_type_p2pkh,
             btc.core.script_type_p2sh,
