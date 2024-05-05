@@ -381,9 +381,10 @@ class Transaction:
         # Append script code of the input
         tx_out_result = btc.rpc.get_tx_out(self.vin[i].out_point.txid[::-1].hex(), self.vin[i].out_point.vout)
         script_pubkey = bytearray.fromhex(tx_out_result['scriptPubKey']['hex'])
-        assert script_pubkey[0] == 0x00
-        assert script_pubkey[1] == 0x14
-        pubkey_hash = script_pubkey[2:]
+        if script_pubkey[:2] == bytearray([0x00, 0x14]):
+            pubkey_hash = script_pubkey[2:]
+        if script_pubkey[:2] == bytearray([0xa9, 0x14]):
+            pubkey_hash = self.vin[i].script_sig[3:]
         assert len(pubkey_hash) == 20
         script_code = bytearray([0x19, 0x76, 0xa9, 0x14]) + pubkey_hash + bytearray([0x88, 0xac])
         data.extend(script_code)

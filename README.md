@@ -62,11 +62,15 @@ $ bitcoind
 $ bitcoin-cli -named createwallet wallet_name=main descriptors=false load_on_startup=true
 $ bitcoin-cli importaddress mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r
 $ bitcoin-cli importaddress mg8Jz5776UdyiYcBb9Z873NTozEiADRW5H
+$ bitcoin-cli importaddress 2NAUYAHhujozruyzpsFRP63mbrdaU5wnEpN
+$ bitcoin-cli importaddress 2N74VLxyT79VGHiBK2zEg3a9HJG7rEc5F3o
 $ bitcoin-cli importaddress bcrt1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080
 $ bitcoin-cli importaddress bcrt1qq6hag67dl53wl99vzg42z8eyzfz2xlkvwk6f7m
 
-$ bitcoin-cli generatetoaddress 101 mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r
-$ bitcoin-cli generatetoaddress 101 bcrt1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080
+$ bitcoin-cli generatetoaddress 10 mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r
+$ bitcoin-cli generatetoaddress 10 2NAUYAHhujozruyzpsFRP63mbrdaU5wnEpN
+$ bitcoin-cli generatetoaddress 10 bcrt1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080
+$ bitcoin-cli generatetoaddress 90 mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r
 
 $ pytest -v
 ```

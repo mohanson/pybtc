@@ -6,6 +6,7 @@ def test_wallet_transfer():
     btc.config.current = btc.config.develop
     script_type_list = [
         btc.core.script_type_p2pkh,
+        btc.core.script_type_p2sh,
         btc.core.script_type_p2wpkh,
     ]
     for user_type, mate_type in itertools.product(script_type_list, script_type_list):
