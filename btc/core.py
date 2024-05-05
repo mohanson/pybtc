@@ -386,7 +386,6 @@ class Transaction:
                 snap.extend(u.script_pubkey)
             hash_outputs = hash256(snap)
         if sighash & 0x1f == sighash_single and i < len(self.vout):
-            raise Exception
             snap = bytearray()
             u = self.vout[i]
             snap.extend(u.value.to_bytes(8, 'little'))
