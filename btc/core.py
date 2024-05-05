@@ -13,6 +13,11 @@ sighash_none = 0x02
 sighash_single = 0x03
 sighash_anyone_can_pay = 0x80
 
+script_type_p2pkh = 0x01
+script_type_p2sh = 0x02
+script_type_p2wpkh = 0x03
+script_type_p2tr = 0x04
+
 
 def hash160(data: bytearray) -> bytearray:
     return bytearray(btc.ripemd160.ripemd160(hashlib.sha256(data).digest()).digest())
@@ -164,6 +169,18 @@ def address_p2tr(pubkey: PubKey) -> str:
     tweak_p = btc.secp256k1.G * tweak_k
     tweak_p = btc.secp256k1.Pt(btc.secp256k1.Fq(pubkey.x), btc.secp256k1.Fq(pubkey.y)) + tweak_p
     return btc.bech32m.encode(btc.config.current.prefix.bech32, 1, bytearray(tweak_p.x.x.to_bytes(32)))
+
+
+def address(pubkey: PubKey, script_type: int) -> str:
+    if script_type == script_type_p2pkh:
+        return address_p2pkh(pubkey)
+    if script_type == script_type_p2sh:
+        return address_p2sh(pubkey)
+    if script_type == script_type_p2wpkh:
+        return address_p2wpkh(pubkey)
+    if script_type == script_type_p2tr:
+        return address_p2tr(pubkey)
+    raise Exception
 
 
 def compact_size_encode(n: int) -> bytearray:
@@ -533,6 +550,23 @@ def script_pubkey_p2sh(addr: str) -> bytearray:
 def script_pubkey_p2wpkh(addr: str) -> bytearray:
     _, hash = btc.bech32.decode(btc.config.current.prefix.bech32, addr)
     return bytearray([0x00, 0x14]) + hash
+
+
+def script_pubkey_p2tr(_: str) -> bytearray:
+    raise Exception
+
+
+def script_pubkey(addr: str) -> bytearray:
+    if addr.startswith(btc.config.current.prefix.bech32):
+        if addr[len(btc.config.current.prefix.bech32) + 1] == 'q':
+            return script_pubkey_p2wpkh(addr)
+        if addr[len(btc.config.current.prefix.bech32) + 1] == 'p':
+            return script_pubkey_p2tr(addr)
+    if btc.base58.decode(addr)[0] == btc.config.current.prefix.p2pkh:
+        return script_pubkey_p2pkh(addr)
+    if btc.base58.decode(addr)[0] == btc.config.current.prefix.p2sh:
+        return script_pubkey_p2sh(addr)
+    raise Exception
 
 
 def der_encode(r: btc.secp256k1.Fr, s: btc.secp256k1.Fr) -> bytearray:

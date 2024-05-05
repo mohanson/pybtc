@@ -40,11 +40,18 @@ class WalletUtxoSearchFromBitcoinCore:
 
 
 class Wallet:
-    def __init__(self, prikey: int):
+    def __init__(self, prikey: int, script_type: int = btc.core.script_type_p2pkh):
+        assert script_type in [
+            btc.core.script_type_p2pkh,
+            btc.core.script_type_p2sh,
+            btc.core.script_type_p2wpkh,
+            btc.core.script_type_p2tr,
+        ]
         self.prikey = btc.core.PriKey(prikey)
         self.pubkey = self.prikey.pubkey()
-        self.addr = btc.core.address_p2pkh(self.pubkey)
-        self.script = btc.core.script_pubkey_p2pkh(self.addr)
+        self.addr = btc.core.address(self.pubkey, script_type)
+        self.script_type = script_type
+        self.script = btc.core.script_pubkey(self.addr)
         self.utxo = WalletUtxoSearchFromBitcoinCore()
 
     def __repr__(self):
