@@ -521,14 +521,18 @@ class Transaction:
         return math.ceil(self.weight() / 4.0)
 
     def weight(self):
-        data = self.serialize()
-        size_segwit = 0
-        if data[4] == 0x00 and data[5] == 0x01:
-            size_segwit += 2
-            for i in self.vin:
-                size_segwit += len(i.witness) if i.witness else 1
-        size_legacy = len(data) - size_segwit
-        return size_legacy * 4 + size_segwit * 1
+        size_legacy = len(self.serialize_legacy())
+        size_segwit = len(self.serialize_segwit()) - size_legacy
+        return size_legacy * 4 + size_segwit
+
+        # data = self.serialize()
+        # size_segwit = 0
+        # if data[4] == 0x00 and data[5] == 0x01:
+        #     size_segwit += 2
+        #     for i in self.vin:
+        #         size_segwit += len(i.witness) if i.witness else 1
+        # size_legacy = len(data) - size_segwit
+        # return size_legacy * 4 + size_segwit * 1
 
 
 def script_pubkey_p2pkh(addr: str) -> bytearray:
