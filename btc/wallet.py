@@ -74,86 +74,29 @@ class Wallet:
             'addr': self.addr,
         }
 
-    def transfer(self, script: bytearray, value: int):
-        sender_value = 0
-        accept_value = value
-        accept_script = script
-        change_value = 0
-        change_script = self.script
-        fr = btc.rpc.estimates_mart_fee(6)['feerate'] * btc.denomination.bitcoin
-        fr = int(fr.to_integral_exact()) // 1000
-        tx = btc.core.Transaction(2, [], [], 0)
-        tx.vout.append(btc.core.TxOut(accept_value, accept_script))
-        tx.vout.append(btc.core.TxOut(change_value, change_script))
-        for utxo in self.unspent():
-            tx.vin.append(btc.core.TxIn(utxo.out_point, bytearray(107), 0xffffffff, []))
-            sender_value += utxo.value
-            change_value = sender_value - accept_value - tx.vbytes() * fr
-            # How was the dust limit of 546 satoshis was chosen?
-            # See: https://bitcoin.stackexchange.com/questions/86068
-            if change_value >= 546:
-                break
-        assert change_value >= 546
-        tx.vout[1].value = change_value
+    def sign_p2pkh(self, tx: btc.core.Transaction):
+        assert self.script_type == btc.core.script_type_p2pkh
         for i, e in enumerate(tx.vin):
             r, s, _ = self.prikey.sign(tx.digest_legacy(i, btc.core.sighash_all))
             g = btc.core.der_encode(r, s) + bytearray([btc.core.sighash_all])
             e.script_sig = bytearray([len(g)]) + g + bytearray([33]) + self.pubkey.sec()
-        txid = bytearray.fromhex(btc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
-        return txid
+        return tx
 
-    def transfer_all(self, script: bytearray):
-        sender_value = 0
-        accept_value = 0
-        accept_script = script
-        fr = btc.rpc.estimates_mart_fee(6)['feerate'] * btc.denomination.bitcoin
-        fr = int(fr.to_integral_exact()) // 1000
-        tx = btc.core.Transaction(2, [], [], 0)
-        tx.vout.append(btc.core.TxOut(accept_value, accept_script))
-        for utxo in self.unspent():
-            tx.vin.append(btc.core.TxIn(utxo.out_point, bytearray(107), 0xffffffff, []))
-            sender_value += utxo.value
-        accept_value = sender_value - tx.vbytes() * fr
-        assert accept_value >= 546
-        tx.vout[0].value = accept_value
+    def sign_p2wpkh(self, tx: btc.core.Transaction):
+        assert self.script_type == btc.core.script_type_p2wpkh
         for i, e in enumerate(tx.vin):
-            r, s, _ = self.prikey.sign(tx.digest_legacy(i, btc.core.sighash_all))
+            r, s, _ = self.prikey.sign(tx.digest_segwit(i, btc.core.sighash_all))
             g = btc.core.der_encode(r, s) + bytearray([btc.core.sighash_all])
-            e.script_sig = bytearray([len(g)]) + g + bytearray([33]) + self.pubkey.sec()
-        txid = bytearray.fromhex(btc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
-        return txid
+            e.witness[0] = g
+            e.witness[1] = self.pubkey.sec()
+        return tx
 
-    def unspent(self) -> typing.List[WalletUtxo]:
-        return self.utxo.unspent(self.addr)
-
-
-class WalletSegwit:
-    def __init__(self, prikey: int):
-        self.prikey = btc.core.PriKey(prikey)
-        self.pubkey = self.prikey.pubkey()
-        self.addr = btc.core.address_p2wpkh(self.pubkey)
-        self.script = btc.core.script_pubkey_p2wpkh(self.addr)
-        self.utxo = WalletUtxoSearchFromBitcoinCore()
-
-    def __repr__(self):
-        return json.dumps(self.json())
-
-    def __eq__(self, other):
-        return all([
-            self.prikey == other.prikey,
-            self.pubkey == other.pubkey,
-            self.addr == other.addr,
-        ])
-
-    def balance(self):
-        return sum([e.value for e in self.unspent()])
-
-    def json(self):
-        return {
-            'prikey': self.prikey.json(),
-            'pubkey': self.pubkey.json(),
-            'addr': self.addr,
-        }
+    def sign(self, tx: btc.core.Transaction):
+        if self.script_type == btc.core.script_type_p2pkh:
+            return self.sign_p2pkh(tx)
+        if self.script_type == btc.core.script_type_p2wpkh:
+            return self.sign_p2wpkh(tx)
+        raise Exception
 
     def transfer(self, script: bytearray, value: int):
         sender_value = 0
@@ -167,7 +110,12 @@ class WalletSegwit:
         tx.vout.append(btc.core.TxOut(accept_value, accept_script))
         tx.vout.append(btc.core.TxOut(change_value, change_script))
         for utxo in self.unspent():
-            tx.vin.append(btc.core.TxIn(utxo.out_point, bytearray(), 0xffffffff, [bytearray(72), bytearray(33)]))
+            txin = btc.core.TxIn(utxo.out_point, bytearray(), 0xffffffff, [])
+            if self.script_type == btc.core.script_type_p2pkh:
+                txin.script_sig = bytearray(107)
+            if self.script_type == btc.core.script_type_p2wpkh:
+                txin.witness = [bytearray(72), bytearray(33)]
+            tx.vin.append(txin)
             sender_value += utxo.value
             change_value = sender_value - accept_value - tx.vbytes() * fr
             # How was the dust limit of 546 satoshis was chosen?
@@ -176,12 +124,7 @@ class WalletSegwit:
                 break
         assert change_value >= 546
         tx.vout[1].value = change_value
-        for i, e in enumerate(tx.vin):
-            r, s, _ = self.prikey.sign(tx.digest_segwit(i, btc.core.sighash_all))
-            g = btc.core.der_encode(r, s) + bytearray([btc.core.sighash_all])
-            e.witness[0] = g
-            e.witness[1] = self.pubkey.sec()
-        txid = bytearray.fromhex(btc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
+        txid = bytearray.fromhex(btc.rpc.send_raw_transaction(self.sign(tx).serialize().hex()))[::-1]
         return txid
 
     def transfer_all(self, script: bytearray):
@@ -193,17 +136,17 @@ class WalletSegwit:
         tx = btc.core.Transaction(2, [], [], 0)
         tx.vout.append(btc.core.TxOut(accept_value, accept_script))
         for utxo in self.unspent():
-            tx.vin.append(btc.core.TxIn(utxo.out_point, bytearray(), 0xffffffff, [bytearray(72), bytearray(33)]))
+            txin = btc.core.TxIn(utxo.out_point, bytearray(), 0xffffffff, [])
+            if self.script_type == btc.core.script_type_p2pkh:
+                txin.script_sig = bytearray(107)
+            if self.script_type == btc.core.script_type_p2wpkh:
+                txin.witness = [bytearray(72), bytearray(33)]
+            tx.vin.append(txin)
             sender_value += utxo.value
         accept_value = sender_value - tx.vbytes() * fr
         assert accept_value >= 546
         tx.vout[0].value = accept_value
-        for i, e in enumerate(tx.vin):
-            r, s, _ = self.prikey.sign(tx.digest_segwit(i, btc.core.sighash_all))
-            g = btc.core.der_encode(r, s) + bytearray([btc.core.sighash_all])
-            e.witness[0] = g
-            e.witness[1] = self.pubkey.sec()
-        txid = bytearray.fromhex(btc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
+        txid = bytearray.fromhex(btc.rpc.send_raw_transaction(self.sign(tx).serialize().hex()))[::-1]
         return txid
 
     def unspent(self) -> typing.List[WalletUtxo]:
