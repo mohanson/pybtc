@@ -30,6 +30,18 @@ $ python example/addr.py --net mainnet --prikey 0x000000000000000000000000000000
 # p2tr   bc1pmfr3p9j00pfxjh0zmgp99y8zftmd3s5pmedqhyptwy6lm87hf5sspknck9
 ```
 
+**example/transfer.py**
+
+Transfer bitcoin to another account. Pybtc has implemented a bitcoin core utxo searcher by default, you can refer to the Test chapter to configure the bitcoin core regtest node.
+
+```sh
+$ python example/transfer.py --prikey 1 --script-type p2pkh --to mg8Jz5776UdyiYcBb9Z873NTozEiADRW5H --value 0.1
+
+# 0x039d1b0fe969d33341a7db9ddd236f632d6851292200603abc5a6c7738bf3079
+```
+
+You can implement the utxo searcher yourself so you don't have to rely on the bitcoin core node. Reference: [btc.wallet.WalletUtxoSearchFromBitcoinCore](btc/wallet.py)
+
 ## Test
 
 The testing of this project depends on regtest. You can use the following steps to build the regtest node.

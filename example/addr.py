@@ -4,7 +4,7 @@ import btc
 # Calculate the address from a private key.
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--net', type=str, choices=['develop', 'mainnet', 'testnet'], default='testnet')
+parser.add_argument('--net', type=str, choices=['develop', 'mainnet', 'testnet'], default='develop')
 parser.add_argument('--prikey', type=str, help='private key')
 args = parser.parse_args()
 
