@@ -3,6 +3,28 @@ import json
 import typing
 
 
+class WalletTransactionAnalyzer:
+    def __init__(self, tx: btc.core.Transaction):
+        self.tx = tx
+
+    def analyze_mining_fee(self):
+        # Make sure the transaction fee is less than 50 satoshi per byte. This is a rough check, but works well in most
+        # cases.
+        sender_value = 0
+        output_value = 0
+        for e in self.tx.vin:
+            tx_out_result = btc.rpc.get_tx_out(e.out_point.txid[::-1].hex(), e.out_point.vout)
+            value = tx_out_result['value'] * btc.denomination.bitcoin
+            value = int(value.to_integral_exact())
+            sender_value += value
+        for e in self.tx.vout:
+            output_value += e.value
+        assert sender_value - output_value <= self.tx.vbytes() * 50
+
+    def analyze(self):
+        self.analyze_mining_fee()
+
+
 class WalletUtxo:
     def __init__(self, out_point: btc.core.OutPoint, value: int):
         self.out_point = out_point
@@ -124,7 +146,9 @@ class Wallet:
                 break
         assert change_value >= 546
         tx.vout[1].value = change_value
-        txid = bytearray.fromhex(btc.rpc.send_raw_transaction(self.sign(tx).serialize().hex()))[::-1]
+        self.sign(tx)
+        WalletTransactionAnalyzer(tx).analyze()
+        txid = bytearray.fromhex(btc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
         return txid
 
     def transfer_all(self, script: bytearray):
@@ -146,7 +170,9 @@ class Wallet:
         accept_value = sender_value - tx.vbytes() * fr
         assert accept_value >= 546
         tx.vout[0].value = accept_value
-        txid = bytearray.fromhex(btc.rpc.send_raw_transaction(self.sign(tx).serialize().hex()))[::-1]
+        self.sign(tx)
+        WalletTransactionAnalyzer(tx).analyze()
+        txid = bytearray.fromhex(btc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
         return txid
 
     def unspent(self) -> typing.List[WalletUtxo]:
