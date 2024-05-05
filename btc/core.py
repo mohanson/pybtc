@@ -501,9 +501,11 @@ class Transaction:
             value = int.from_bytes(reader.read(8), 'little')
             script_pubkey = bytearray(reader.read(compact_size_decode_reader(reader)))
             tx.vout.append(TxOut(value, script_pubkey))
-        for i in range(compact_size_decode_reader(reader)):
-            witness = bytearray(reader.read(compact_size_decode_reader(reader)))
-            tx.vin[i].witness = witness
+        for i in range(len(tx.vin)):
+            wits = []
+            for _ in range(compact_size_decode_reader(reader)):
+                wits.append(bytearray(reader.read(compact_size_decode_reader(reader))))
+            tx.vin[i].witness = witness_encode(wits)
         tx.locktime = int.from_bytes(reader.read(4), 'little')
         return tx
 
@@ -524,15 +526,6 @@ class Transaction:
         size_legacy = len(self.serialize_legacy())
         size_segwit = len(self.serialize_segwit()) - size_legacy
         return size_legacy * 4 + size_segwit
-
-        # data = self.serialize()
-        # size_segwit = 0
-        # if data[4] == 0x00 and data[5] == 0x01:
-        #     size_segwit += 2
-        #     for i in self.vin:
-        #         size_segwit += len(i.witness) if i.witness else 1
-        # size_legacy = len(data) - size_segwit
-        # return size_legacy * 4 + size_segwit * 1
 
 
 def script_pubkey_p2pkh(addr: str) -> bytearray:
@@ -587,3 +580,12 @@ def der_decode(sign: bytearray) -> typing.Tuple[btc.secp256k1.Fr, btc.secp256k1.
     f = f + 2
     s = btc.secp256k1.Fr(int.from_bytes(sign[f:f+slen]))
     return r, s
+
+
+def witness_encode(wits: typing.List[bytearray]) -> bytearray:
+    data = bytearray()
+    data.extend(compact_size_encode(len(wits)))
+    for e in wits:
+        data.extend(compact_size_encode(len(e)))
+        data.extend(e)
+    return data
