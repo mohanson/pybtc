@@ -113,13 +113,6 @@ class Wallet:
             e.witness[1] = self.pubkey.sec()
         return tx
 
-    def sign(self, tx: btc.core.Transaction):
-        if self.script_type == btc.core.script_type_p2pkh:
-            return self.sign_p2pkh(tx)
-        if self.script_type == btc.core.script_type_p2wpkh:
-            return self.sign_p2wpkh(tx)
-        raise Exception
-
     def transfer(self, script: bytearray, value: int):
         sender_value = 0
         accept_value = value
@@ -146,7 +139,10 @@ class Wallet:
                 break
         assert change_value >= 546
         tx.vout[1].value = change_value
-        self.sign(tx)
+        if self.script_type == btc.core.script_type_p2pkh:
+            self.sign_p2pkh(tx)
+        if self.script_type == btc.core.script_type_p2wpkh:
+            self.sign_p2wpkh(tx)
         WalletTransactionAnalyzer(tx).analyze()
         txid = bytearray.fromhex(btc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
         return txid
@@ -170,7 +166,10 @@ class Wallet:
         accept_value = sender_value - tx.vbytes() * fr
         assert accept_value >= 546
         tx.vout[0].value = accept_value
-        self.sign(tx)
+        if self.script_type == btc.core.script_type_p2pkh:
+            self.sign_p2pkh(tx)
+        if self.script_type == btc.core.script_type_p2wpkh:
+            self.sign_p2wpkh(tx)
         WalletTransactionAnalyzer(tx).analyze()
         txid = bytearray.fromhex(btc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
         return txid
