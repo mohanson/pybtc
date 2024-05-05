@@ -67,7 +67,7 @@ class PriKey:
         return btc.base58.encode(data)
 
     @staticmethod
-    def wif_read(data: str):
+    def wif_decode(data: str):
         data = btc.base58.decode(data)
         assert data[0] == btc.config.current.prefix.wif
         assert hash256(data[:-4])[:4] == data[-4:]
@@ -104,7 +104,7 @@ class PubKey:
         return r
 
     @staticmethod
-    def sec_read(data: bytearray):
+    def sec_decode(data: bytearray):
         p = data[0]
         assert p in [0x02, 0x03, 0x04]
         x = int.from_bytes(data[1:33])
@@ -467,7 +467,7 @@ class Transaction:
             return self.serialize_legacy()
 
     @staticmethod
-    def serialize_read_legacy(data: bytearray):
+    def serialize_decode_legacy(data: bytearray):
         reader = io.BytesIO(data)
         tx = Transaction(0, [], [], 0)
         tx.version = int.from_bytes(reader.read(4), 'little')
@@ -485,7 +485,7 @@ class Transaction:
         return tx
 
     @staticmethod
-    def serialize_read_segwit(data: bytearray):
+    def serialize_decode_segwit(data: bytearray):
         reader = io.BytesIO(data)
         tx = Transaction(0, [], [], 0)
         tx.version = int.from_bytes(reader.read(4), 'little')
@@ -508,11 +508,11 @@ class Transaction:
         return tx
 
     @staticmethod
-    def serialize_read(data: bytearray):
+    def serialize_decode(data: bytearray):
         if data[4] == 0x00:
-            return Transaction.serialize_read_segwit(data)
+            return Transaction.serialize_decode_segwit(data)
         else:
-            return Transaction.serialize_read_legacy(data)
+            return Transaction.serialize_decode_legacy(data)
 
     def txid(self):
         return hash256(self.serialize_legacy())
