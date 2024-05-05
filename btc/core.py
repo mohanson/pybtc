@@ -366,7 +366,7 @@ class Transaction:
         script_pubkey = bytearray.fromhex(tx_out_result['scriptPubKey']['hex'])
         assert script_pubkey[0] == 0x00
         assert script_pubkey[1] == 0x14
-        pubkey_hash = script_pubkey[0x02:0x16]
+        pubkey_hash = script_pubkey[2:]
         assert len(pubkey_hash) == 20
         script_code = bytearray([0x19, 0x76, 0xa9, 0x14]) + pubkey_hash + bytearray([0x88, 0xac])
         data.extend(script_code)
