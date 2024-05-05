@@ -13,6 +13,11 @@ sighash_none = 0x02
 sighash_single = 0x03
 sighash_anyone_can_pay = 0x80
 
+script_type_p2pkh = 0x01
+script_type_p2sh = 0x02
+script_type_p2wpkh = 0x03
+script_type_p2tr = 0x04
+
 
 def hash160(data: bytearray) -> bytearray:
     return bytearray(btc.ripemd160.ripemd160(hashlib.sha256(data).digest()).digest())
@@ -67,7 +72,7 @@ class PriKey:
         return btc.base58.encode(data)
 
     @staticmethod
-    def wif_read(data: str):
+    def wif_decode(data: str):
         data = btc.base58.decode(data)
         assert data[0] == btc.config.current.prefix.wif
         assert hash256(data[:-4])[:4] == data[-4:]
@@ -104,7 +109,7 @@ class PubKey:
         return r
 
     @staticmethod
-    def sec_read(data: bytearray):
+    def sec_decode(data: bytearray):
         p = data[0]
         assert p in [0x02, 0x03, 0x04]
         x = int.from_bytes(data[1:33])
@@ -166,6 +171,18 @@ def address_p2tr(pubkey: PubKey) -> str:
     return btc.bech32m.encode(btc.config.current.prefix.bech32, 1, bytearray(tweak_p.x.x.to_bytes(32)))
 
 
+def address(pubkey: PubKey, script_type: int) -> str:
+    if script_type == script_type_p2pkh:
+        return address_p2pkh(pubkey)
+    if script_type == script_type_p2sh:
+        return address_p2sh(pubkey)
+    if script_type == script_type_p2wpkh:
+        return address_p2wpkh(pubkey)
+    if script_type == script_type_p2tr:
+        return address_p2tr(pubkey)
+    raise Exception
+
+
 def compact_size_encode(n: int) -> bytearray:
     # Integer can be encoded depending on the represented value to save space. Variable length integers always precede
     # an array/vector of a type of data that may vary in length. Longer numbers are encoded in little endian.
@@ -184,16 +201,7 @@ def compact_size_encode(n: int) -> bytearray:
 
 
 def compact_size_decode(data: bytearray) -> int:
-    head = data[0]
-    if head <= 0xfc:
-        return head
-    if head == 0xfd:
-        assert len(data) == 3
-    if head == 0xfe:
-        assert len(data) == 5
-    if head == 0xff:
-        assert len(data) == 9
-    return int.from_bytes(data[1:], 'little')
+    return compact_size_decode_reader(io.BytesIO(data))
 
 
 def compact_size_decode_reader(reader: typing.BinaryIO) -> int:
@@ -237,7 +245,7 @@ class OutPoint:
 
 
 class TxIn:
-    def __init__(self, out_point: OutPoint, script_sig: bytearray, sequence: int, witness: bytearray):
+    def __init__(self, out_point: OutPoint, script_sig: bytearray, sequence: int, witness: typing.List[bytearray]):
         assert sequence >= 0
         assert sequence <= 0xffffffff
         self.out_point = out_point
@@ -257,14 +265,14 @@ class TxIn:
         ])
 
     def copy(self):
-        return TxIn(self.out_point.copy(), self.script_sig.copy(), self.sequence, self.witness.copy())
+        return TxIn(self.out_point.copy(), self.script_sig.copy(), self.sequence, [e.copy() for e in self.witness])
 
     def json(self):
         return {
             'out_point': self.out_point.json(),
             'script_sig': f'0x{self.script_sig.hex()}',
             'sequence': self.sequence,
-            'witness': f'0x{self.witness.hex()}',
+            'witness': [f'0x{e.hex()}' for e in self.witness],
         }
 
 
@@ -343,6 +351,70 @@ class Transaction:
         data.extend(bytearray([sighash, 0x00, 0x00, 0x00]))
         return hash256(data)
 
+    def digest_segwit(self, i: int, sighash: int):
+        # A new transaction digest algorithm for signature verification in version 0 witness program, in order to
+        # minimize redundant data hashing in verification, and to cover the input value by the signature.
+        # See: https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki
+        data = bytearray()
+        # Append version of the transaction (4-byte little endian)
+        data.extend(self.version.to_bytes(4, 'little'))
+        # Append hash prevouts (32-byte hash)
+        hash = bytearray(32)
+        if sighash & sighash_anyone_can_pay == 0x00:
+            snap = bytearray()
+            for e in self.vin:
+                snap.extend(e.out_point.txid)
+                snap.extend(e.out_point.vout.to_bytes(4, 'little'))
+            hash = hash256(snap)
+        data.extend(hash)
+        # Append hash sequence (32-byte hash)
+        hash = bytearray(32)
+        if sighash == sighash_all:
+            snap = bytearray()
+            for e in self.vin:
+                snap.extend(e.sequence.to_bytes(4, 'little'))
+            hash = hash256(snap)
+        data.extend(hash)
+        # Append outpoint (32-byte hash + 4-byte little endian)
+        data.extend(self.vin[i].out_point.txid)
+        data.extend(self.vin[i].out_point.vout.to_bytes(4, 'little'))
+        # Append script code of the input
+        tx_out_result = btc.rpc.get_tx_out(self.vin[i].out_point.txid[::-1].hex(), self.vin[i].out_point.vout)
+        script_pubkey = bytearray.fromhex(tx_out_result['scriptPubKey']['hex'])
+        assert script_pubkey[0] == 0x00
+        assert script_pubkey[1] == 0x14
+        pubkey_hash = script_pubkey[2:]
+        assert len(pubkey_hash) == 20
+        script_code = bytearray([0x19, 0x76, 0xa9, 0x14]) + pubkey_hash + bytearray([0x88, 0xac])
+        data.extend(script_code)
+        # Append value of the output spent by this input (8-byte little endian)
+        value = tx_out_result['value'] * btc.denomination.bitcoin
+        value = int(value.to_integral_exact())
+        data.extend(value.to_bytes(8, 'little'))
+        # Append sequence of the input (4-byte little endian)
+        data.extend(self.vin[i].sequence.to_bytes(4, 'little'))
+        # Append hash outputs (32-byte hash)
+        hash = bytearray(32)
+        if sighash & 0x1f == sighash_all:
+            snap = bytearray()
+            for e in self.vout:
+                snap.extend(e.value.to_bytes(8, 'little'))
+                snap.extend(compact_size_encode(len(e.script_pubkey)))
+                snap.extend(e.script_pubkey)
+            hash = hash256(snap)
+        if sighash & 0x1f == sighash_single and i < len(self.vout):
+            snap = bytearray()
+            snap.extend(self.vout[i].value.to_bytes(8, 'little'))
+            snap.extend(compact_size_encode(len(self.vout[i].script_pubkey)))
+            snap.extend(self.vout[i].script_pubkey)
+            hash = hash256(snap)
+        data.extend(hash)
+        # Append locktime of the transaction (4-byte little endian)
+        data.extend(self.locktime.to_bytes(4, 'little'))
+        # Append sighash type of the signature (4-byte little endian)
+        data.extend(bytearray([sighash, 0x00, 0x00, 0x00]))
+        return hash256(data)
+
     def json(self):
         return {
             'version': self.version,
@@ -386,10 +458,8 @@ class Transaction:
             data.extend(o.value.to_bytes(8, 'little'))
             data.extend(compact_size_encode(len(o.script_pubkey)))
             data.extend(o.script_pubkey)
-        data.extend(compact_size_encode(len(self.vin)))
         for i in self.vin:
-            data.extend(compact_size_encode(len(i.witness)))
-            data.extend(i.witness)
+            data.extend(witness_encode(i.witness))
         data.extend(self.locktime.to_bytes(4, 'little'))
         return data
 
@@ -397,13 +467,13 @@ class Transaction:
         # If any inputs have nonempty witnesses, the entire transaction is serialized in the BIP141 Segwit format which
         # includes a list of witnesses.
         # See: https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki
-        if any([e.witness != bytearray() for e in self.vin]):
+        if any([e.witness for e in self.vin]):
             return self.serialize_segwit()
         else:
             return self.serialize_legacy()
 
     @staticmethod
-    def serialize_read_legacy(data: bytearray):
+    def serialize_decode_legacy(data: bytearray):
         reader = io.BytesIO(data)
         tx = Transaction(0, [], [], 0)
         tx.version = int.from_bytes(reader.read(4), 'little')
@@ -412,7 +482,7 @@ class Transaction:
             vout = int.from_bytes(reader.read(4), 'little')
             script_sig = bytearray(reader.read(compact_size_decode_reader(reader)))
             sequence = int.from_bytes(reader.read(4), 'little')
-            tx.vin.append(TxIn(OutPoint(txid, vout), script_sig, sequence, bytearray()))
+            tx.vin.append(TxIn(OutPoint(txid, vout), script_sig, sequence, []))
         for _ in range(compact_size_decode_reader(reader)):
             value = int.from_bytes(reader.read(8), 'little')
             script_pubkey = bytearray(reader.read(compact_size_decode_reader(reader)))
@@ -421,7 +491,7 @@ class Transaction:
         return tx
 
     @staticmethod
-    def serialize_read_segwit(data: bytearray):
+    def serialize_decode_segwit(data: bytearray):
         reader = io.BytesIO(data)
         tx = Transaction(0, [], [], 0)
         tx.version = int.from_bytes(reader.read(4), 'little')
@@ -432,23 +502,22 @@ class Transaction:
             vout = int.from_bytes(reader.read(4), 'little')
             script_sig = bytearray(reader.read(compact_size_decode_reader(reader)))
             sequence = int.from_bytes(reader.read(4), 'little')
-            tx.vin.append(TxIn(OutPoint(txid, vout), script_sig, sequence, bytearray()))
+            tx.vin.append(TxIn(OutPoint(txid, vout), script_sig, sequence, []))
         for _ in range(compact_size_decode_reader(reader)):
             value = int.from_bytes(reader.read(8), 'little')
             script_pubkey = bytearray(reader.read(compact_size_decode_reader(reader)))
             tx.vout.append(TxOut(value, script_pubkey))
-        for i in range(compact_size_decode_reader(reader)):
-            witness = bytearray(reader.read(compact_size_decode_reader(reader)))
-            tx.vin[i].witness = witness
+        for i in range(len(tx.vin)):
+            tx.vin[i].witness = witness_decode_reader(reader)
         tx.locktime = int.from_bytes(reader.read(4), 'little')
         return tx
 
     @staticmethod
-    def serialize_read(data: bytearray):
+    def serialize_decode(data: bytearray):
         if data[4] == 0x00:
-            return Transaction.serialize_read_segwit(data)
+            return Transaction.serialize_decode_segwit(data)
         else:
-            return Transaction.serialize_read_legacy(data)
+            return Transaction.serialize_decode_legacy(data)
 
     def txid(self):
         return hash256(self.serialize_legacy())
@@ -457,16 +526,9 @@ class Transaction:
         return math.ceil(self.weight() / 4.0)
 
     def weight(self):
-        data = self.serialize()
-        size_segwit = 0
-        if data[4] == 0x00 and data[5] == 0x01:
-            size_segwit += 2
-            size_segwit += len(compact_size_encode(len(self.vin)))
-            for i in self.vin:
-                size_segwit += len(compact_size_encode(len(i.witness)))
-                size_segwit += len(i.witness)
-        size_legacy = len(data) - size_segwit
-        return size_legacy * 4 + size_segwit * 1
+        size_legacy = len(self.serialize_legacy())
+        size_segwit = len(self.serialize_segwit()) - size_legacy
+        return size_legacy * 4 + size_segwit
 
 
 def script_pubkey_p2pkh(addr: str) -> bytearray:
@@ -475,6 +537,36 @@ def script_pubkey_p2pkh(addr: str) -> bytearray:
     hash = data[0x01:0x15]
     assert btc.core.hash256(data[0x00:0x15])[:4] == data[0x15:0x19]
     return bytearray([0x76, 0xa9, 0x14]) + hash + bytearray([0x88, 0xac])
+
+
+def script_pubkey_p2sh(addr: str) -> bytearray:
+    data = btc.base58.decode(addr)
+    assert data[0] == btc.config.current.prefix.p2sh
+    hash = data[0x01:0x15]
+    assert btc.core.hash256(data[0x00:0x15])[:4] == data[0x15:0x19]
+    return bytearray([0xa9, 0x14]) + hash + bytearray([0x87])
+
+
+def script_pubkey_p2wpkh(addr: str) -> bytearray:
+    _, hash = btc.bech32.decode(btc.config.current.prefix.bech32, addr)
+    return bytearray([0x00, 0x14]) + hash
+
+
+def script_pubkey_p2tr(_: str) -> bytearray:
+    raise Exception
+
+
+def script_pubkey(addr: str) -> bytearray:
+    if addr.startswith(btc.config.current.prefix.bech32):
+        if addr[len(btc.config.current.prefix.bech32) + 1] == 'q':
+            return script_pubkey_p2wpkh(addr)
+        if addr[len(btc.config.current.prefix.bech32) + 1] == 'p':
+            return script_pubkey_p2tr(addr)
+    if btc.base58.decode(addr)[0] == btc.config.current.prefix.p2pkh:
+        return script_pubkey_p2pkh(addr)
+    if btc.base58.decode(addr)[0] == btc.config.current.prefix.p2sh:
+        return script_pubkey_p2sh(addr)
+    raise Exception
 
 
 def der_encode(r: btc.secp256k1.Fr, s: btc.secp256k1.Fr) -> bytearray:
@@ -508,3 +600,23 @@ def der_decode(sign: bytearray) -> typing.Tuple[btc.secp256k1.Fr, btc.secp256k1.
     f = f + 2
     s = btc.secp256k1.Fr(int.from_bytes(sign[f:f+slen]))
     return r, s
+
+
+def witness_encode(wits: typing.List[bytearray]) -> bytearray:
+    data = bytearray()
+    data.extend(compact_size_encode(len(wits)))
+    for e in wits:
+        data.extend(compact_size_encode(len(e)))
+        data.extend(e)
+    return data
+
+
+def witness_decode(data: bytearray) -> typing.List[bytearray]:
+    return witness_decode_reader(io.BytesIO(data))
+
+
+def witness_decode_reader(r: typing.BinaryIO) -> typing.List[bytearray]:
+    wits = []
+    for _ in range(compact_size_decode_reader(r)):
+        wits.append(bytearray(r.read(compact_size_decode_reader(r))))
+    return wits

@@ -18,10 +18,10 @@ def test_prikey_wif():
     btc.config.current = btc.config.mainnet
     prikey = btc.core.PriKey(1)
     assert prikey.wif() == 'KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn'
-    assert prikey == btc.core.PriKey.wif_read(prikey.wif())
+    assert prikey == btc.core.PriKey.wif_decode(prikey.wif())
     btc.config.current = btc.config.testnet
     assert prikey.wif() == 'cMahea7zqjxrtgAbB7LSGbcQUr1uX1ojuat9jZodMN87JcbXMTcA'
-    assert prikey == btc.core.PriKey.wif_read(prikey.wif())
+    assert prikey == btc.core.PriKey.wif_decode(prikey.wif())
 
 
 def test_pubkey_sec():
@@ -33,14 +33,14 @@ def test_pubkey_sec():
 
 
 def test_pubkey_sec_read():
-    pubkey = btc.core.PubKey.sec_read(bytes.fromhex(''.join([
+    pubkey = btc.core.PubKey.sec_decode(bytes.fromhex(''.join([
         '04',
         '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
         '483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8'
     ])))
     assert pubkey.x == 0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798
     assert pubkey.y == 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
-    pubkey = btc.core.PubKey.sec_read(bytes.fromhex(''.join([
+    pubkey = btc.core.PubKey.sec_decode(bytes.fromhex(''.join([
         '02',
         '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
     ])))
@@ -133,7 +133,7 @@ def test_transaction():
         0xb0, 0xd2, 0xfa, 0x2b, 0x42, 0xa4, 0x51, 0x82, 0xfc, 0x83, 0xe8, 0x17, 0x13, 0x01, 0x00, 0x00,
         0x00, 0x00,
     ])
-    tx = btc.core.Transaction.serialize_read(data)
+    tx = btc.core.Transaction.serialize_decode(data)
     assert tx.serialize() == data
     assert tx.version == 1
     assert len(tx.vin) == 1
@@ -141,3 +141,9 @@ def test_transaction():
     assert tx.locktime == 0
     assert tx.weight() == 569
     assert tx.txid() == bytearray.fromhex('7761f9d1ecbcf9c129802aaadfdfec38419aa441519d94bc5b21968630006246')
+
+
+def test_witness():
+    for _ in range(256):
+        wits = [random.randbytes(random.randint(0, 256)) for _ in range(random.randint(0, 256))]
+        assert btc.core.witness_decode(btc.core.witness_encode(wits)) == wits
