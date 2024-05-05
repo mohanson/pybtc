@@ -22,7 +22,7 @@ def test_wallet_transfer():
     assert mate.balance() == 0
 
 
-def test_wallet_p2pkh_transfer():
+def test_wallet_p2wpkh_transfer():
     btc.config.current = btc.config.develop
     user = btc.wallet.WalletSegwit(1)
     mate = btc.wallet.WalletSegwit(2)

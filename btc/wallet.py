@@ -79,7 +79,7 @@ class Wallet:
         tx.vout.append(btc.core.TxOut(accept_value, accept_script))
         tx.vout.append(btc.core.TxOut(change_value, change_script))
         for utxo in self.unspent():
-            tx.vin.append(btc.core.TxIn(utxo.out_point, bytearray(107), 0xffffffff, bytearray()))
+            tx.vin.append(btc.core.TxIn(utxo.out_point, bytearray(107), 0xffffffff, []))
             sender_value += utxo.value
             change_value = sender_value - accept_value - tx.vbytes() * fr
             # How was the dust limit of 546 satoshis was chosen?
@@ -104,7 +104,7 @@ class Wallet:
         tx = btc.core.Transaction(2, [], [], 0)
         tx.vout.append(btc.core.TxOut(accept_value, accept_script))
         for utxo in self.unspent():
-            tx.vin.append(btc.core.TxIn(utxo.out_point, bytearray(107), 0xffffffff, bytearray()))
+            tx.vin.append(btc.core.TxIn(utxo.out_point, bytearray(107), 0xffffffff, []))
             sender_value += utxo.value
         accept_value = sender_value - tx.vbytes() * fr
         assert accept_value >= 546
@@ -160,7 +160,7 @@ class WalletSegwit:
         tx.vout.append(btc.core.TxOut(accept_value, accept_script))
         tx.vout.append(btc.core.TxOut(change_value, change_script))
         for utxo in self.unspent():
-            tx.vin.append(btc.core.TxIn(utxo.out_point, bytearray(), 0xffffffff, bytearray(108)))
+            tx.vin.append(btc.core.TxIn(utxo.out_point, bytearray(), 0xffffffff, [bytearray(72), bytearray(33)]))
             sender_value += utxo.value
             change_value = sender_value - accept_value - tx.vbytes() * fr
             # How was the dust limit of 546 satoshis was chosen?
@@ -172,13 +172,8 @@ class WalletSegwit:
         for i, e in enumerate(tx.vin):
             r, s, _ = self.prikey.sign(tx.digest_segwit(i, btc.core.sighash_all))
             g = btc.core.der_encode(r, s) + bytearray([btc.core.sighash_all])
-            buff = bytearray()
-            buff.extend(btc.core.compact_size_encode(2))
-            buff.extend(btc.core.compact_size_encode(len(g)))
-            buff.extend(g)
-            buff.extend(btc.core.compact_size_encode(33))
-            buff.extend(self.pubkey.sec())
-            e.witness = buff
+            e.witness[0] = g
+            e.witness[1] = self.pubkey.sec()
         txid = bytearray.fromhex(btc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
         return txid
 
@@ -191,7 +186,7 @@ class WalletSegwit:
         tx = btc.core.Transaction(2, [], [], 0)
         tx.vout.append(btc.core.TxOut(accept_value, accept_script))
         for utxo in self.unspent():
-            tx.vin.append(btc.core.TxIn(utxo.out_point, bytearray(), 0xffffffff, bytearray(108)))
+            tx.vin.append(btc.core.TxIn(utxo.out_point, bytearray(), 0xffffffff, [bytearray(72), bytearray(33)]))
             sender_value += utxo.value
         accept_value = sender_value - tx.vbytes() * fr
         assert accept_value >= 546
@@ -199,13 +194,8 @@ class WalletSegwit:
         for i, e in enumerate(tx.vin):
             r, s, _ = self.prikey.sign(tx.digest_segwit(i, btc.core.sighash_all))
             g = btc.core.der_encode(r, s) + bytearray([btc.core.sighash_all])
-            buff = bytearray()
-            buff.extend(btc.core.compact_size_encode(2))
-            buff.extend(btc.core.compact_size_encode(len(g)))
-            buff.extend(g)
-            buff.extend(btc.core.compact_size_encode(33))
-            buff.extend(self.pubkey.sec())
-            e.witness = buff
+            e.witness[0] = g
+            e.witness[1] = self.pubkey.sec()
         txid = bytearray.fromhex(btc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
         return txid
 

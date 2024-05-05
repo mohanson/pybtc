@@ -237,7 +237,7 @@ class OutPoint:
 
 
 class TxIn:
-    def __init__(self, out_point: OutPoint, script_sig: bytearray, sequence: int, witness: bytearray):
+    def __init__(self, out_point: OutPoint, script_sig: bytearray, sequence: int, witness: typing.List[bytearray]):
         assert sequence >= 0
         assert sequence <= 0xffffffff
         self.out_point = out_point
@@ -257,14 +257,14 @@ class TxIn:
         ])
 
     def copy(self):
-        return TxIn(self.out_point.copy(), self.script_sig.copy(), self.sequence, self.witness.copy())
+        return TxIn(self.out_point.copy(), self.script_sig.copy(), self.sequence, [e.copy() for e in self.witness])
 
     def json(self):
         return {
             'out_point': self.out_point.json(),
             'script_sig': f'0x{self.script_sig.hex()}',
             'sequence': self.sequence,
-            'witness': f'0x{self.witness.hex()}',
+            'witness': [f'0x{e.hex()}' for e in self.witness],
         }
 
 
@@ -453,7 +453,7 @@ class Transaction:
             data.extend(compact_size_encode(len(o.script_pubkey)))
             data.extend(o.script_pubkey)
         for i in self.vin:
-            data.extend(i.witness if i.witness else bytearray([0x00]))
+            data.extend(witness_encode(i.witness))
         data.extend(self.locktime.to_bytes(4, 'little'))
         return data
 
@@ -461,7 +461,7 @@ class Transaction:
         # If any inputs have nonempty witnesses, the entire transaction is serialized in the BIP141 Segwit format which
         # includes a list of witnesses.
         # See: https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki
-        if any([e.witness != bytearray() for e in self.vin]):
+        if any([e.witness for e in self.vin]):
             return self.serialize_segwit()
         else:
             return self.serialize_legacy()
@@ -476,7 +476,7 @@ class Transaction:
             vout = int.from_bytes(reader.read(4), 'little')
             script_sig = bytearray(reader.read(compact_size_decode_reader(reader)))
             sequence = int.from_bytes(reader.read(4), 'little')
-            tx.vin.append(TxIn(OutPoint(txid, vout), script_sig, sequence, bytearray()))
+            tx.vin.append(TxIn(OutPoint(txid, vout), script_sig, sequence, []))
         for _ in range(compact_size_decode_reader(reader)):
             value = int.from_bytes(reader.read(8), 'little')
             script_pubkey = bytearray(reader.read(compact_size_decode_reader(reader)))
@@ -496,14 +496,13 @@ class Transaction:
             vout = int.from_bytes(reader.read(4), 'little')
             script_sig = bytearray(reader.read(compact_size_decode_reader(reader)))
             sequence = int.from_bytes(reader.read(4), 'little')
-            tx.vin.append(TxIn(OutPoint(txid, vout), script_sig, sequence, bytearray()))
+            tx.vin.append(TxIn(OutPoint(txid, vout), script_sig, sequence, []))
         for _ in range(compact_size_decode_reader(reader)):
             value = int.from_bytes(reader.read(8), 'little')
             script_pubkey = bytearray(reader.read(compact_size_decode_reader(reader)))
             tx.vout.append(TxOut(value, script_pubkey))
         for i in range(len(tx.vin)):
-            wits = witness_decode_reader(reader)
-            tx.vin[i].witness = witness_encode(wits)
+            tx.vin[i].witness = witness_decode_reader(reader)
         tx.locktime = int.from_bytes(reader.read(4), 'little')
         return tx
 
