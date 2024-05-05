@@ -184,16 +184,7 @@ def compact_size_encode(n: int) -> bytearray:
 
 
 def compact_size_decode(data: bytearray) -> int:
-    head = data[0]
-    if head <= 0xfc:
-        return head
-    if head == 0xfd:
-        assert len(data) == 3
-    if head == 0xfe:
-        assert len(data) == 5
-    if head == 0xff:
-        assert len(data) == 9
-    return int.from_bytes(data[1:], 'little')
+    return compact_size_decode_reader(io.BytesIO(data))
 
 
 def compact_size_decode_reader(reader: typing.BinaryIO) -> int:
