@@ -376,6 +376,7 @@ class Transaction:
         assert script_pubkey[0] == 0x00
         assert script_pubkey[1] == 0x14
         pubkey_hash = script_pubkey[0x02:0x16]
+        assert len(pubkey_hash) == 20
         script_code = bytearray([0x19, 0x76, 0xa9, 0x14]) + pubkey_hash + bytearray([0x88, 0xac])
         data.extend(script_code)
         # 6. value of the output spent by this input (8-byte little endian)
@@ -394,6 +395,8 @@ class Transaction:
                 snap.extend(u.script_pubkey)
             hash_outputs = hash256(snap)
         if sighash & 0x1f == sighash_single and i < len(self.vout):
+            raise Exception
+            snap = bytearray()
             u = self.vout[i]
             snap.extend(u.value.to_bytes(8, 'little'))
             snap.extend(compact_size_encode(len(u.script_pubkey)))
@@ -449,10 +452,8 @@ class Transaction:
             data.extend(o.value.to_bytes(8, 'little'))
             data.extend(compact_size_encode(len(o.script_pubkey)))
             data.extend(o.script_pubkey)
-        data.extend(compact_size_encode(len(self.vin)))
         for i in self.vin:
-            data.extend(compact_size_encode(len(i.witness)))
-            data.extend(i.witness)
+            data.extend(i.witness if i.witness else bytearray([0x00]))
         data.extend(self.locktime.to_bytes(4, 'little'))
         return data
 
@@ -524,10 +525,8 @@ class Transaction:
         size_segwit = 0
         if data[4] == 0x00 and data[5] == 0x01:
             size_segwit += 2
-            size_segwit += len(compact_size_encode(len(self.vin)))
             for i in self.vin:
-                size_segwit += len(compact_size_encode(len(i.witness)))
-                size_segwit += len(i.witness)
+                size_segwit += len(i.witness) if i.witness else 1
         size_legacy = len(data) - size_segwit
         return size_legacy * 4 + size_segwit * 1
 
