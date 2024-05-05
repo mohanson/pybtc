@@ -339,31 +339,29 @@ class Transaction:
         # minimize redundant data hashing in verification, and to cover the input value by the signature.
         # See: https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki
         data = bytearray()
-        # 1. nVersion of the transaction (4-byte little endian)
+        # Append version of the transaction (4-byte little endian)
         data.extend(self.version.to_bytes(4, 'little'))
-        # 2. hashPrevouts (32-byte hash)
-        # If the ANYONECANPAY flag is not set, hashPrevouts is the double SHA256 of the serialization of all input
-        # outpoints; Otherwise, hashPrevouts is a uint256 of 0x0000......0000.
-        hash_prevouts = bytearray(32)
+        # Append hash prevouts (32-byte hash)
+        hash = bytearray(32)
         if sighash & sighash_anyone_can_pay == 0x00:
             snap = bytearray()
-            for j in self.vin:
-                snap.extend(j.out_point.txid)
-                snap.extend(j.out_point.vout.to_bytes(4, 'little'))
-            hash_prevouts = hash256(snap)
-        data.extend(hash_prevouts)
-        # 3. hashSequence (32-byte hash)
-        hash_sequence = bytearray(32)
+            for e in self.vin:
+                snap.extend(e.out_point.txid)
+                snap.extend(e.out_point.vout.to_bytes(4, 'little'))
+            hash = hash256(snap)
+        data.extend(hash)
+        # Append hash sequence (32-byte hash)
+        hash = bytearray(32)
         if sighash == sighash_all:
             snap = bytearray()
-            for j in self.vin:
-                snap.extend(j.sequence.to_bytes(4, 'little'))
-            hash_sequence = hash256(snap)
-        data.extend(hash_sequence)
-        # 4. outpoint (32-byte hash + 4-byte little endian)
+            for e in self.vin:
+                snap.extend(e.sequence.to_bytes(4, 'little'))
+            hash = hash256(snap)
+        data.extend(hash)
+        # Append outpoint (32-byte hash + 4-byte little endian)
         data.extend(self.vin[i].out_point.txid)
         data.extend(self.vin[i].out_point.vout.to_bytes(4, 'little'))
-        # 5. scriptCode of the input (serialized as scripts inside CTxOuts)
+        # Append script code of the input
         tx_out_result = btc.rpc.get_tx_out(self.vin[i].out_point.txid[::-1].hex(), self.vin[i].out_point.vout)
         script_pubkey = bytearray.fromhex(tx_out_result['scriptPubKey']['hex'])
         assert script_pubkey[0] == 0x00
@@ -372,32 +370,31 @@ class Transaction:
         assert len(pubkey_hash) == 20
         script_code = bytearray([0x19, 0x76, 0xa9, 0x14]) + pubkey_hash + bytearray([0x88, 0xac])
         data.extend(script_code)
-        # 6. value of the output spent by this input (8-byte little endian)
+        # Append value of the output spent by this input (8-byte little endian)
         value = tx_out_result['value'] * btc.denomination.bitcoin
         value = int(value.to_integral_exact())
         data.extend(value.to_bytes(8, 'little'))
-        # 7. nSequence of the input (4-byte little endian)
+        # Append sequence of the input (4-byte little endian)
         data.extend(self.vin[i].sequence.to_bytes(4, 'little'))
-        # 8. hashOutputs (32-byte hash)
-        hash_outputs = bytearray(32)
+        # Append hash outputs (32-byte hash)
+        hash = bytearray(32)
         if sighash & 0x1f == sighash_all:
             snap = bytearray()
-            for u in self.vout:
-                snap.extend(u.value.to_bytes(8, 'little'))
-                snap.extend(compact_size_encode(len(u.script_pubkey)))
-                snap.extend(u.script_pubkey)
-            hash_outputs = hash256(snap)
+            for e in self.vout:
+                snap.extend(e.value.to_bytes(8, 'little'))
+                snap.extend(compact_size_encode(len(e.script_pubkey)))
+                snap.extend(e.script_pubkey)
+            hash = hash256(snap)
         if sighash & 0x1f == sighash_single and i < len(self.vout):
             snap = bytearray()
-            u = self.vout[i]
-            snap.extend(u.value.to_bytes(8, 'little'))
-            snap.extend(compact_size_encode(len(u.script_pubkey)))
-            snap.extend(u.script_pubkey)
-            hash_outputs = hash256(snap)
-        data.extend(hash_outputs)
-        # 9. nLocktime of the transaction (4-byte little endian)
+            snap.extend(self.vout[i].value.to_bytes(8, 'little'))
+            snap.extend(compact_size_encode(len(self.vout[i].script_pubkey)))
+            snap.extend(self.vout[i].script_pubkey)
+            hash = hash256(snap)
+        data.extend(hash)
+        # Append locktime of the transaction (4-byte little endian)
         data.extend(self.locktime.to_bytes(4, 'little'))
-        # 10. sighash type of the signature (4-byte little endian)
+        # Append sighash type of the signature (4-byte little endian)
         data.extend(bytearray([sighash, 0x00, 0x00, 0x00]))
         return hash256(data)
 
