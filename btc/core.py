@@ -335,6 +335,8 @@ class Transaction:
         return hash256(data)
 
     def digest_segwit(self, i: int, sighash: int):
+        # A new transaction digest algorithm for signature verification in version 0 witness program, in order to
+        # minimize redundant data hashing in verification, and to cover the input value by the signature.
         # See: https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki
         data = bytearray()
         # 1. nVersion of the transaction (4-byte little endian)
