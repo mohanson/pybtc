@@ -588,6 +588,10 @@ def witness_encode(wits: typing.List[bytearray]) -> bytearray:
     return data
 
 
+def witness_decode(data: bytearray) -> typing.List[bytearray]:
+    return witness_decode_reader(io.BytesIO(data))
+
+
 def witness_decode_reader(r: typing.BinaryIO) -> typing.List[bytearray]:
     wits = []
     for _ in range(compact_size_decode_reader(r)):
