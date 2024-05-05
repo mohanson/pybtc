@@ -182,5 +182,32 @@ class WalletSegwit:
         txid = bytearray.fromhex(btc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
         return txid
 
+    def transfer_all(self, script: bytearray):
+        sender_value = 0
+        accept_value = 0
+        accept_script = script
+        fr = btc.rpc.estimates_mart_fee(6)['feerate'] * btc.denomination.bitcoin
+        fr = int(fr.to_integral_exact()) // 1000
+        tx = btc.core.Transaction(2, [], [], 0)
+        tx.vout.append(btc.core.TxOut(accept_value, accept_script))
+        for utxo in self.unspent():
+            tx.vin.append(btc.core.TxIn(utxo.out_point, bytearray(), 0xffffffff, bytearray(108)))
+            sender_value += utxo.value
+        accept_value = sender_value - tx.vbytes() * fr
+        assert accept_value >= 546
+        tx.vout[0].value = accept_value
+        for i, e in enumerate(tx.vin):
+            r, s, _ = self.prikey.sign(tx.digest_segwit(i, btc.core.sighash_all))
+            g = btc.core.der_encode(r, s) + bytearray([btc.core.sighash_all])
+            buff = bytearray()
+            buff.extend(btc.core.compact_size_encode(2))
+            buff.extend(btc.core.compact_size_encode(len(g)))
+            buff.extend(g)
+            buff.extend(btc.core.compact_size_encode(33))
+            buff.extend(self.pubkey.sec())
+            e.witness = buff
+        txid = bytearray.fromhex(btc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
+        return txid
+
     def unspent(self) -> typing.List[WalletUtxo]:
         return self.utxo.unspent(self.addr)
