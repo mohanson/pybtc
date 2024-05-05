@@ -502,9 +502,7 @@ class Transaction:
             script_pubkey = bytearray(reader.read(compact_size_decode_reader(reader)))
             tx.vout.append(TxOut(value, script_pubkey))
         for i in range(len(tx.vin)):
-            wits = []
-            for _ in range(compact_size_decode_reader(reader)):
-                wits.append(bytearray(reader.read(compact_size_decode_reader(reader))))
+            wits = witness_decode_reader(reader)
             tx.vin[i].witness = witness_encode(wits)
         tx.locktime = int.from_bytes(reader.read(4), 'little')
         return tx
@@ -589,3 +587,10 @@ def witness_encode(wits: typing.List[bytearray]) -> bytearray:
         data.extend(compact_size_encode(len(e)))
         data.extend(e)
     return data
+
+
+def witness_decode_reader(r: typing.BinaryIO) -> typing.List[bytearray]:
+    wits = []
+    for _ in range(compact_size_decode_reader(r)):
+        wits.append(bytearray(r.read(compact_size_decode_reader(r))))
+    return wits
