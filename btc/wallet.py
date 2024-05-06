@@ -84,6 +84,8 @@ class Wallet:
             self.prikey == other.prikey,
             self.pubkey == other.pubkey,
             self.addr == other.addr,
+            self.script_type == other.script_type,
+            self.script == other.script,
         ])
 
     def balance(self):
@@ -94,6 +96,13 @@ class Wallet:
             'prikey': self.prikey.json(),
             'pubkey': self.pubkey.json(),
             'addr': self.addr,
+            'script_type': {
+                btc.core.script_pubkey_p2pkh: 'p2pkh',
+                btc.core.script_pubkey_p2sh: 'p2sh',
+                btc.core.script_pubkey_p2wpkh: 'p2wpkh',
+                btc.core.script_pubkey_p2tr: 'p2tr',
+            }[self.script_type],
+            'script': self.script.hex(),
         }
 
     def sign_p2pkh(self, tx: btc.core.Transaction):
@@ -104,10 +113,27 @@ class Wallet:
             e.script_sig = bytearray([len(g)]) + g + bytearray([33]) + self.pubkey.sec()
         return tx
 
-    def sign_p2wpkh(self, tx: btc.core.Transaction):
-        assert self.script_type == btc.core.script_type_p2wpkh
+    def sign_p2sh(self, tx: btc.core.Transaction):
+        # See: https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#p2wpkh-nested-in-bip16-p2sh
+        assert self.script_type == btc.core.script_type_p2sh
+        pubkey_hash = btc.core.hash160(self.pubkey.sec())
+        script_code = bytearray([0x19, 0x76, 0xa9, 0x14]) + pubkey_hash + bytearray([0x88, 0xac])
+        script_sig = bytearray([0x16, 0x00, 0x14]) + pubkey_hash
         for i, e in enumerate(tx.vin):
-            r, s, _ = self.prikey.sign(tx.digest_segwit(i, btc.core.sighash_all))
+            e.script_sig = script_sig
+            r, s, _ = self.prikey.sign(tx.digest_segwit(i, script_code, btc.core.sighash_all))
+            g = btc.core.der_encode(r, s) + bytearray([btc.core.sighash_all])
+            e.witness[0] = g
+            e.witness[1] = self.pubkey.sec()
+        return tx
+
+    def sign_p2wpkh(self, tx: btc.core.Transaction):
+        # See: https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#p2wpkh
+        assert self.script_type == btc.core.script_type_p2wpkh
+        pubkey_hash = btc.core.hash160(self.pubkey.sec())
+        script_code = bytearray([0x19, 0x76, 0xa9, 0x14]) + pubkey_hash + bytearray([0x88, 0xac])
+        for i, e in enumerate(tx.vin):
+            r, s, _ = self.prikey.sign(tx.digest_segwit(i, script_code, btc.core.sighash_all))
             g = btc.core.der_encode(r, s) + bytearray([btc.core.sighash_all])
             e.witness[0] = g
             e.witness[1] = self.pubkey.sec()
@@ -128,6 +154,9 @@ class Wallet:
             txin = btc.core.TxIn(utxo.out_point, bytearray(), 0xffffffff, [])
             if self.script_type == btc.core.script_type_p2pkh:
                 txin.script_sig = bytearray(107)
+            if self.script_type == btc.core.script_type_p2sh:
+                txin.script_sig = bytearray(23)
+                txin.witness = [bytearray(72), bytearray(33)]
             if self.script_type == btc.core.script_type_p2wpkh:
                 txin.witness = [bytearray(72), bytearray(33)]
             tx.vin.append(txin)
@@ -141,6 +170,8 @@ class Wallet:
         tx.vout[1].value = change_value
         if self.script_type == btc.core.script_type_p2pkh:
             self.sign_p2pkh(tx)
+        if self.script_type == btc.core.script_type_p2sh:
+            self.sign_p2sh(tx)
         if self.script_type == btc.core.script_type_p2wpkh:
             self.sign_p2wpkh(tx)
         WalletTransactionAnalyzer(tx).analyze()
@@ -159,6 +190,9 @@ class Wallet:
             txin = btc.core.TxIn(utxo.out_point, bytearray(), 0xffffffff, [])
             if self.script_type == btc.core.script_type_p2pkh:
                 txin.script_sig = bytearray(107)
+            if self.script_type == btc.core.script_type_p2sh:
+                txin.script_sig = bytearray(23)
+                txin.witness = [bytearray(72), bytearray(33)]
             if self.script_type == btc.core.script_type_p2wpkh:
                 txin.witness = [bytearray(72), bytearray(33)]
             tx.vin.append(txin)
@@ -168,6 +202,8 @@ class Wallet:
         tx.vout[0].value = accept_value
         if self.script_type == btc.core.script_type_p2pkh:
             self.sign_p2pkh(tx)
+        if self.script_type == btc.core.script_type_p2sh:
+            self.sign_p2sh(tx)
         if self.script_type == btc.core.script_type_p2wpkh:
             self.sign_p2wpkh(tx)
         WalletTransactionAnalyzer(tx).analyze()
