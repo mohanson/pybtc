@@ -351,7 +351,7 @@ class Transaction:
         data.extend(bytearray([sighash, 0x00, 0x00, 0x00]))
         return hash256(data)
 
-    def digest_segwit(self, i: int, sighash: int):
+    def digest_segwit(self, i: int, script_code: bytearray, sighash: int):
         # A new transaction digest algorithm for signature verification in version 0 witness program, in order to
         # minimize redundant data hashing in verification, and to cover the input value by the signature.
         # See: https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki
@@ -379,16 +379,9 @@ class Transaction:
         data.extend(self.vin[i].out_point.txid)
         data.extend(self.vin[i].out_point.vout.to_bytes(4, 'little'))
         # Append script code of the input.
-        tx_out_result = btc.rpc.get_tx_out(self.vin[i].out_point.txid[::-1].hex(), self.vin[i].out_point.vout)
-        script_pubkey = bytearray.fromhex(tx_out_result['scriptPubKey']['hex'])
-        if script_pubkey[:2] == bytearray([0x00, 0x14]):
-            pubkey_hash = script_pubkey[2:]
-        if script_pubkey[:2] == bytearray([0xa9, 0x14]):
-            pubkey_hash = self.vin[i].script_sig[3:]
-        assert len(pubkey_hash) == 20
-        script_code = bytearray([0x19, 0x76, 0xa9, 0x14]) + pubkey_hash + bytearray([0x88, 0xac])
         data.extend(script_code)
         # Append value of the output spent by this input.
+        tx_out_result = btc.rpc.get_tx_out(self.vin[i].out_point.txid[::-1].hex(), self.vin[i].out_point.vout)
         value = tx_out_result['value'] * btc.denomination.bitcoin
         value = int(value.to_integral_exact())
         data.extend(value.to_bytes(8, 'little'))
