@@ -106,6 +106,7 @@ class Wallet:
         return tx
 
     def sign_p2sh(self, tx: btc.core.Transaction):
+        # See: https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#p2wpkh-nested-in-bip16-p2sh
         assert self.script_type == btc.core.script_type_p2sh
         for i, e in enumerate(tx.vin):
             e.script_sig = bytearray([0x16, 0x00, 0x14]) + btc.core.hash160(self.pubkey.sec())
@@ -116,6 +117,7 @@ class Wallet:
         return tx
 
     def sign_p2wpkh(self, tx: btc.core.Transaction):
+        # See: https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#p2wpkh
         assert self.script_type == btc.core.script_type_p2wpkh
         for i, e in enumerate(tx.vin):
             r, s, _ = self.prikey.sign(tx.digest_segwit(i, btc.core.sighash_all))
