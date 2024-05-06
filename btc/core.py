@@ -356,9 +356,9 @@ class Transaction:
         # minimize redundant data hashing in verification, and to cover the input value by the signature.
         # See: https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki
         data = bytearray()
-        # Append version of the transaction (4-byte little endian)
+        # Append version of the transaction.
         data.extend(self.version.to_bytes(4, 'little'))
-        # Append hash prevouts (32-byte hash)
+        # Append hash prevouts.
         hash = bytearray(32)
         if sighash & sighash_anyone_can_pay == 0x00:
             snap = bytearray()
@@ -367,7 +367,7 @@ class Transaction:
                 snap.extend(e.out_point.vout.to_bytes(4, 'little'))
             hash = hash256(snap)
         data.extend(hash)
-        # Append hash sequence (32-byte hash)
+        # Append hash sequence.
         hash = bytearray(32)
         if sighash == sighash_all:
             snap = bytearray()
@@ -375,10 +375,10 @@ class Transaction:
                 snap.extend(e.sequence.to_bytes(4, 'little'))
             hash = hash256(snap)
         data.extend(hash)
-        # Append outpoint (32-byte hash + 4-byte little endian)
+        # Append outpoint.
         data.extend(self.vin[i].out_point.txid)
         data.extend(self.vin[i].out_point.vout.to_bytes(4, 'little'))
-        # Append script code of the input
+        # Append script code of the input.
         tx_out_result = btc.rpc.get_tx_out(self.vin[i].out_point.txid[::-1].hex(), self.vin[i].out_point.vout)
         script_pubkey = bytearray.fromhex(tx_out_result['scriptPubKey']['hex'])
         if script_pubkey[:2] == bytearray([0x00, 0x14]):
@@ -388,13 +388,13 @@ class Transaction:
         assert len(pubkey_hash) == 20
         script_code = bytearray([0x19, 0x76, 0xa9, 0x14]) + pubkey_hash + bytearray([0x88, 0xac])
         data.extend(script_code)
-        # Append value of the output spent by this input (8-byte little endian)
+        # Append value of the output spent by this input.
         value = tx_out_result['value'] * btc.denomination.bitcoin
         value = int(value.to_integral_exact())
         data.extend(value.to_bytes(8, 'little'))
-        # Append sequence of the input (4-byte little endian)
+        # Append sequence of the input.
         data.extend(self.vin[i].sequence.to_bytes(4, 'little'))
-        # Append hash outputs (32-byte hash)
+        # Append hash outputs.
         hash = bytearray(32)
         if sighash & 0x1f == sighash_all:
             snap = bytearray()
@@ -410,9 +410,9 @@ class Transaction:
             snap.extend(self.vout[i].script_pubkey)
             hash = hash256(snap)
         data.extend(hash)
-        # Append locktime of the transaction (4-byte little endian)
+        # Append locktime of the transaction.
         data.extend(self.locktime.to_bytes(4, 'little'))
-        # Append sighash type of the signature (4-byte little endian)
+        # Append sighash type of the signature.
         data.extend(bytearray([sighash, 0x00, 0x00, 0x00]))
         return hash256(data)
 
