@@ -84,6 +84,8 @@ class Wallet:
             self.prikey == other.prikey,
             self.pubkey == other.pubkey,
             self.addr == other.addr,
+            self.script_type == other.script_type,
+            self.script == other.script,
         ])
 
     def balance(self):
