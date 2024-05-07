@@ -97,10 +97,10 @@ class Wallet:
             'pubkey': self.pubkey.json(),
             'addr': self.addr,
             'script_type': {
-                btc.core.script_pubkey_p2pkh: 'p2pkh',
-                btc.core.script_pubkey_p2sh: 'p2sh',
-                btc.core.script_pubkey_p2wpkh: 'p2wpkh',
-                btc.core.script_pubkey_p2tr: 'p2tr',
+                btc.core.script_type_p2pkh: 'p2pkh',
+                btc.core.script_type_p2sh: 'p2sh',
+                btc.core.script_type_p2wpkh: 'p2wpkh',
+                btc.core.script_type_p2tr: 'p2tr',
             }[self.script_type],
             'script': self.script.hex(),
         }
