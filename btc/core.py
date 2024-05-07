@@ -157,18 +157,14 @@ def address_p2tr(pubkey: PubKey) -> str:
     # See https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki
     if pubkey.y & 1 != 0:
         # Taproot requires that the y coordinate of the public key is even.
-        pubkey.y = btc.secp256k1.P - pubkey.y
-    tweak_k_data = bytearray([
-        0xe8, 0x0f, 0xe1, 0x63, 0x9c, 0x9c, 0xa0, 0x50, 0xe3, 0xaf, 0x1b, 0x39, 0xc1, 0x43, 0xc6, 0x3e,
-        0x42, 0x9c, 0xbc, 0xeb, 0x15, 0xd9, 0x40, 0xfb, 0xb5, 0xc5, 0xa1, 0xf4, 0xaf, 0x57, 0xc5, 0xe9,
-        0xe8, 0x0f, 0xe1, 0x63, 0x9c, 0x9c, 0xa0, 0x50, 0xe3, 0xaf, 0x1b, 0x39, 0xc1, 0x43, 0xc6, 0x3e,
-        0x42, 0x9c, 0xbc, 0xeb, 0x15, 0xd9, 0x40, 0xfb, 0xb5, 0xc5, 0xa1, 0xf4, 0xaf, 0x57, 0xc5, 0xe9
-    ])
-    tweak_k_data.extend(pubkey.sec()[1:])
-    tweak_k = btc.secp256k1.Fr(int.from_bytes(hashlib.sha256(tweak_k_data).digest()))
-    tweak_p = btc.secp256k1.G * tweak_k
-    tweak_p = btc.secp256k1.Pt(btc.secp256k1.Fq(pubkey.x), btc.secp256k1.Fq(pubkey.y)) + tweak_p
-    return btc.bech32m.encode(btc.config.current.prefix.bech32, 1, bytearray(tweak_p.x.x.to_bytes(32)))
+        pubkey = PubKey(pubkey.x, btc.secp256k1.P - pubkey.y)
+    tag = bytearray(hashlib.sha256('TapTweak'.encode()).digest())
+    tag_data = tag + tag + pubkey.x.to_bytes(32)
+    tag_hash = bytearray(hashlib.sha256(tag_data).digest())
+    tweak_prikey = btc.secp256k1.Fr(int.from_bytes(tag_hash))
+    tweak_pubkey = btc.secp256k1.G * tweak_prikey
+    tweak_pubkey = btc.secp256k1.Pt(btc.secp256k1.Fq(pubkey.x), btc.secp256k1.Fq(pubkey.y)) + tweak_pubkey
+    return btc.bech32m.encode(btc.config.current.prefix.bech32, 1, bytearray(tweak_pubkey.x.x.to_bytes(32)))
 
 
 def address(pubkey: PubKey, script_type: int) -> str:
