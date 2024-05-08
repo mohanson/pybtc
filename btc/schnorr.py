@@ -3,6 +3,8 @@ import hashlib
 import random
 import typing
 
+# Schnorr Signatures for secp256k1.
+# See: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
 
 def hashtag(name: str, data: bytearray) -> bytearray:
     tag = bytearray(hashlib.sha256(name.encode()).digest())
