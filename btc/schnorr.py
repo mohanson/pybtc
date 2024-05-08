@@ -1,21 +1,43 @@
 import btc.secp256k1
+import hashlib
+import random
+import typing
 
 
-def sign(prikey: btc.secp256k1.Fr, m: btc.secp256k1.Fr):
+def hashtag(name: str, data: bytearray) -> bytearray:
+    tag = bytearray(hashlib.sha256(name.encode()).digest())
+    out = bytearray(hashlib.sha256(tag + tag + data).digest())
+    return out
+
+
+def prikey_implicit(prikey: btc.secp256k1.Fr) -> btc.secp256k1.Fr:
     pubkey = btc.secp256k1.G * prikey
+    if pubkey == pubkey_implicit(pubkey):
+        return +prikey
+    else:
+        return -prikey
+
+
+def pubkey_implicit(pubkey: btc.secp256k1.Pt) -> btc.secp256k1.Pt:
     if pubkey.y.x & 1:
-        pubkey = -pubkey
-    # k = btc.secp256k1.Fr(random.randint(0, secp256k1.N))
-    # R = secp256k1.G * k
-    # hasher = hashlib.sha256()
-    # hasher.update(R.x.x.to_bytes(32, 'little'))
-    # hasher.update(R.y.x.to_bytes(32, 'little'))
-    # hasher.update(m.x.to_bytes(32, 'little'))
-    # e = secp256k1.Fr(int.from_bytes(hasher.digest(), 'little'))
-    # s = k + e * prikey
-    # return R, s
-    pass
+        return -pubkey
+    else:
+        return +pubkey
 
 
-def verify():
-    pass
+def sign(prikey: btc.secp256k1.Fr, m: btc.secp256k1.Fr) -> typing.Tuple[btc.secp256k1.Pt, btc.secp256k1.Fr]:
+    prikey = prikey_implicit(prikey)
+    pubkey = btc.secp256k1.G * prikey
+    k = prikey_implicit(btc.secp256k1.Fr(random.randint(0, btc.secp256k1.N)))
+    r = btc.secp256k1.G * k
+    e_hash = hashtag('challenge', r.x.x.to_bytes(32) + pubkey.x.x.to_bytes(32) + m.x.to_bytes(32))
+    e = btc.secp256k1.Fr(int.from_bytes(e_hash))
+    s = k + e * prikey
+    return r, s
+
+
+def verify(pubkey: btc.secp256k1.Pt, m: btc.secp256k1.Fr, r: btc.secp256k1.Pt, s: btc.secp256k1.Fr):
+    pubkey = pubkey_implicit(pubkey)
+    e_hash = hashtag('challenge', r.x.x.to_bytes(32) + pubkey.x.x.to_bytes(32) + m.x.to_bytes(32))
+    e = btc.secp256k1.Fr(int.from_bytes(e_hash))
+    return btc.secp256k1.G * s == r + pubkey * e
