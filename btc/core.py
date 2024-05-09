@@ -542,8 +542,9 @@ def script_pubkey_p2wpkh(addr: str) -> bytearray:
     return bytearray([0x00, 0x14]) + hash
 
 
-def script_pubkey_p2tr(_: str) -> bytearray:
-    raise Exception
+def script_pubkey_p2tr(addr: str) -> bytearray:
+    _, pubx = btc.bech32m.decode(btc.config.current.prefix.bech32, addr)
+    return bytearray([0x51, 0x20]) + pubx
 
 
 def script_pubkey(addr: str) -> bytearray:

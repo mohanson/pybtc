@@ -139,6 +139,9 @@ class Wallet:
             e.witness[1] = self.pubkey.sec()
         return tx
 
+    def sign_p2tr(self, tx: btc.core.Transaction):
+        pass
+
     def transfer(self, script: bytearray, value: int):
         sender_value = 0
         accept_value = value
@@ -159,6 +162,8 @@ class Wallet:
                 txin.witness = [bytearray(72), bytearray(33)]
             if self.script_type == btc.core.script_type_p2wpkh:
                 txin.witness = [bytearray(72), bytearray(33)]
+            if self.script_type == btc.core.script_type_p2tr:
+                txin.witness = [bytearray(65)]
             tx.vin.append(txin)
             sender_value += utxo.value
             change_value = sender_value - accept_value - tx.vbytes() * fr
@@ -174,6 +179,8 @@ class Wallet:
             self.sign_p2sh(tx)
         if self.script_type == btc.core.script_type_p2wpkh:
             self.sign_p2wpkh(tx)
+        if self.script_type == btc.core.script_type_p2tr:
+            self.sign_p2tr(tx)
         WalletTransactionAnalyzer(tx).analyze()
         txid = bytearray.fromhex(btc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
         return txid
@@ -195,6 +202,8 @@ class Wallet:
                 txin.witness = [bytearray(72), bytearray(33)]
             if self.script_type == btc.core.script_type_p2wpkh:
                 txin.witness = [bytearray(72), bytearray(33)]
+            if self.script_type == btc.core.script_type_p2tr:
+                txin.witness = [bytearray(65)]
             tx.vin.append(txin)
             sender_value += utxo.value
         accept_value = sender_value - tx.vbytes() * fr
@@ -206,6 +215,8 @@ class Wallet:
             self.sign_p2sh(tx)
         if self.script_type == btc.core.script_type_p2wpkh:
             self.sign_p2wpkh(tx)
+        if self.script_type == btc.core.script_type_p2tr:
+            self.sign_p2tr(tx)
         WalletTransactionAnalyzer(tx).analyze()
         txid = bytearray.fromhex(btc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
         return txid

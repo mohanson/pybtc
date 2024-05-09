@@ -53,25 +53,35 @@ $ cp -R bitcoin-27.0 ~/app/bitcoin # Install to the target location.
 
 $ mkdir ~/.bitcoin
 $ echo "chain=regtest" >> ~/.bitcoin/bitcoin.conf
-$ echo "deprecatedrpc=create_bdb" >> ~/.bitcoin/bitcoin.conf
 $ echo "rpcpassword=pass" >> ~/.bitcoin/bitcoin.conf
 $ echo "rpcuser=user" >> ~/.bitcoin/bitcoin.conf
 $ echo "txindex=1" >> ~/.bitcoin/bitcoin.conf
 
 $ bitcoind
-$ bitcoin-cli -named createwallet wallet_name=main descriptors=false load_on_startup=true
-$ bitcoin-cli importaddress mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r
-$ bitcoin-cli importaddress mg8Jz5776UdyiYcBb9Z873NTozEiADRW5H
-$ bitcoin-cli importaddress 2NAUYAHhujozruyzpsFRP63mbrdaU5wnEpN
-$ bitcoin-cli importaddress 2N74VLxyT79VGHiBK2zEg3a9HJG7rEc5F3o
-$ bitcoin-cli importaddress bcrt1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080
-$ bitcoin-cli importaddress bcrt1qq6hag67dl53wl99vzg42z8eyzfz2xlkvwk6f7m
+$ bitcoin-cli -named createwallet wallet_name=main disable_private_keys=true load_on_startup=true
+
+$ bitcoin-cli getdescriptorinfo 'pkh(0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798)'
+$ bitcoin-cli getdescriptorinfo 'sh(wpkh(0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798))'
+$ bitcoin-cli getdescriptorinfo 'wpkh(0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798)'
+$ bitcoin-cli getdescriptorinfo 'tr(0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798)'
+$ bitcoin-cli importdescriptors '[{ "desc": "pkh(0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798)#e48zzw02", "timestamp":0 }]'
+$ bitcoin-cli importdescriptors '[{ "desc": "sh(wpkh(0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798))#jqtwwlah", "timestamp":0 }]'
+$ bitcoin-cli importdescriptors '[{ "desc": "wpkh(0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798)#ucxz0gak", "timestamp":0 }]'
+$ bitcoin-cli importdescriptors '[{ "desc": "tr(0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798)#3q50ef67", "timestamp":0 }]'
+$ bitcoin-cli getdescriptorinfo 'pkh(02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5)'
+$ bitcoin-cli getdescriptorinfo 'sh(wpkh(02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5))'
+$ bitcoin-cli getdescriptorinfo 'wpkh(02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5)'
+$ bitcoin-cli getdescriptorinfo 'tr(02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5)'
+$ bitcoin-cli importdescriptors '[{ "desc": "pkh(02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5)#8fhd9pwu", "timestamp":0 }]'
+$ bitcoin-cli importdescriptors '[{ "desc": "sh(wpkh(02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5))#la26f59y", "timestamp":0 }]'
+$ bitcoin-cli importdescriptors '[{ "desc": "wpkh(02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5)#wg9vgf99", "timestamp":0 }]'
+$ bitcoin-cli importdescriptors '[{ "desc": "tr(02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5)#g74uw3rl", "timestamp":0 }]'
 
 $ bitcoin-cli generatetoaddress 10 mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r
 $ bitcoin-cli generatetoaddress 10 2NAUYAHhujozruyzpsFRP63mbrdaU5wnEpN
 $ bitcoin-cli generatetoaddress 10 bcrt1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080
-$ bitcoin-cli generatetoaddress 90 mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r
-
+$ bitcoin-cli generatetoaddress 10 bcrt1pmfr3p9j00pfxjh0zmgp99y8zftmd3s5pmedqhyptwy6lm87hf5ssm803es
+$ bitcoin-cli generatetoaddress 99 mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r
 $ pytest -v
 ```
 
