@@ -32,7 +32,7 @@ $ python example/addr.py --net mainnet --prikey 0x000000000000000000000000000000
 
 **example/transfer.py**
 
-Transfer bitcoin to another account. Pybtc has implemented a bitcoin core utxo searcher by default, you can refer to the Test chapter to configure the bitcoin core regtest node.
+Transfer bitcoin to another account. Pybtc has implemented a bitcoin core utxo searcher by default, you can refer to the Test chapter to configure the bitcoin core regtest node. Supports all four types of Bitcoin transactions: P2PKH, P2SH-P2WPKH, P2WPKH and P2TR.
 
 ```sh
 $ python example/transfer.py --net develop --prikey 1 --script-type p2pkh --to mg8Jz5776UdyiYcBb9Z873NTozEiADRW5H --value 0.1
@@ -53,25 +53,13 @@ $ cp -R bitcoin-27.0 ~/app/bitcoin # Install to the target location.
 
 $ mkdir ~/.bitcoin
 $ echo "chain=regtest" >> ~/.bitcoin/bitcoin.conf
-$ echo "deprecatedrpc=create_bdb" >> ~/.bitcoin/bitcoin.conf
 $ echo "rpcpassword=pass" >> ~/.bitcoin/bitcoin.conf
 $ echo "rpcuser=user" >> ~/.bitcoin/bitcoin.conf
 $ echo "txindex=1" >> ~/.bitcoin/bitcoin.conf
 
 $ bitcoind
-$ bitcoin-cli -named createwallet wallet_name=main descriptors=false load_on_startup=true
-$ bitcoin-cli importaddress mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r
-$ bitcoin-cli importaddress mg8Jz5776UdyiYcBb9Z873NTozEiADRW5H
-$ bitcoin-cli importaddress 2NAUYAHhujozruyzpsFRP63mbrdaU5wnEpN
-$ bitcoin-cli importaddress 2N74VLxyT79VGHiBK2zEg3a9HJG7rEc5F3o
-$ bitcoin-cli importaddress bcrt1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080
-$ bitcoin-cli importaddress bcrt1qq6hag67dl53wl99vzg42z8eyzfz2xlkvwk6f7m
-
-$ bitcoin-cli generatetoaddress 10 mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r
-$ bitcoin-cli generatetoaddress 10 2NAUYAHhujozruyzpsFRP63mbrdaU5wnEpN
-$ bitcoin-cli generatetoaddress 10 bcrt1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080
-$ bitcoin-cli generatetoaddress 90 mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r
-
+# Create default wallets
+$ python example/regtest.py
 $ pytest -v
 ```
 

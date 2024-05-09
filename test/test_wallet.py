@@ -8,6 +8,7 @@ def test_wallet_transfer():
         btc.core.script_type_p2pkh,
         btc.core.script_type_p2sh,
         btc.core.script_type_p2wpkh,
+        btc.core.script_type_p2tr
     ]
     for user_type, mate_type in itertools.product(script_type_list, script_type_list):
         user = btc.wallet.Wallet(1, user_type)

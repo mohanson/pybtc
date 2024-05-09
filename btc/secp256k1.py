@@ -1,3 +1,7 @@
+import typing
+Self = typing.Self
+
+
 class Fp:
     # Galois field. In mathematics, a finite field or Galois field is a field that contains a finite number of elements.
     # As with any field, a finite field is a set on which the operations of multiplication, addition, subtraction and
@@ -15,26 +19,26 @@ class Fp:
     def __repr__(self):
         return f'Fp(0x{self.x:064x})'
 
-    def __eq__(self, data):
+    def __eq__(self, data: Self):
         assert self.p == data.p
         return self.x == data.x
 
-    def __add__(self, data):
+    def __add__(self, data: Self):
         assert self.p == data.p
         return self.__class__((self.x + data.x) % self.p)
 
-    def __sub__(self, data):
+    def __sub__(self, data: Self):
         assert self.p == data.p
         return self.__class__((self.x - data.x) % self.p)
 
-    def __mul__(self, data):
+    def __mul__(self, data: Self):
         assert self.p == data.p
         return self.__class__((self.x * data.x) % self.p)
 
-    def __truediv__(self, data):
+    def __truediv__(self, data: Self):
         return self * data ** -1
 
-    def __pow__(self, data):
+    def __pow__(self, data: int):
         return self.__class__(pow(self.x, data, self.p))
 
     def __pos__(self):
@@ -96,13 +100,13 @@ class Pt:
     def __repr__(self):
         return f'Pt({self.x}, {self.y})'
 
-    def __eq__(self, data):
+    def __eq__(self, data: Self):
         return all([
             self.x == data.x,
             self.y == data.y,
         ])
 
-    def __add__(self, data):
+    def __add__(self, data: Self) -> Self:
         # https://www.cs.miami.edu/home/burt/learning/Csc609.142/ecdsa-cert.pdf
         # Don Johnson, Alfred Menezes and Scott Vanstone, The Elliptic Curve Digital Signature Algorithm (ECDSA)
         # 4.1 Elliptic Curves Over Fp
@@ -122,10 +126,10 @@ class Pt:
         y3 = s * (x1 - x3) - y1
         return Pt(x3, y3)
 
-    def __sub__(self, data):
+    def __sub__(self, data: Self) -> Self:
         return self + data.__neg__()
 
-    def __mul__(self, k: Fr):
+    def __mul__(self, k: Fr) -> Self:
         # Point multiplication: Double-and-add
         # https://en.wikipedia.org/wiki/Elliptic_curve_point_multiplication
         n = k.x
@@ -139,13 +143,13 @@ class Pt:
             n = n >> 1
         return result
 
-    def __truediv__(self, k):
+    def __truediv__(self, k: Fr) -> Self:
         return self.__mul__(k ** -1)
 
-    def __pos__(self):
+    def __pos__(self) -> Self:
         return self
 
-    def __neg__(self):
+    def __neg__(self) -> Self:
         return Pt(self.x, -self.y)
 
 
