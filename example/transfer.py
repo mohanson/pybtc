@@ -6,7 +6,7 @@ import btc
 parser = argparse.ArgumentParser()
 parser.add_argument('--net', type=str, choices=['develop', 'mainnet', 'testnet'], default='develop')
 parser.add_argument('--prikey', type=str, help='private key')
-parser.add_argument('--script-type', type=str, choices=['p2pkh', 'p2sh', 'p2wpkh'])
+parser.add_argument('--script-type', type=str, choices=['p2pkh', 'p2sh', 'p2wpkh', 'p2tr'])
 parser.add_argument('--to', type=str, help='bitcoin address')
 parser.add_argument('--value', type=float, help='bitcoin value')
 args = parser.parse_args()
@@ -24,6 +24,8 @@ if args.script_type == 'p2sh':
     script_type = btc.core.script_type_p2sh
 if args.script_type == 'p2wpkh':
     script_type = btc.core.script_type_p2wpkh
+if args.script_type == 'p2tr':
+    script_type = btc.core.script_type_p2tr
 
 accept_script = btc.core.script_pubkey(args.to)
 accept_value = int(args.value * btc.denomination.bitcoin)

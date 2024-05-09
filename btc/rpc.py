@@ -48,12 +48,20 @@ def get_block_count() -> int:
     return call('getblockcount', [])
 
 
+def get_descriptor_info(descriptor: str) -> typing.Dict:
+    return call('getdescriptorinfo', [descriptor])
+
+
 def get_raw_transaction(txid: str, verbose: bool = False) -> typing.Dict:
     return call('getrawtransaction', [txid, verbose])
 
 
 def get_tx_out(txid: str, vout: int) -> typing.Dict:
     return call('gettxout', [txid, vout])
+
+
+def import_descriptors(requests: typing.List[typing.Dict]) -> typing.List[typing.Dict]:
+    return call('importdescriptors', [requests])
 
 
 def list_unspent(addresses: typing.List[str]) -> typing.List:

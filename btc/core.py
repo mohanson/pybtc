@@ -164,10 +164,7 @@ def address_p2tr(pubkey: PubKey) -> str:
     if pubkey.y & 1 != 0:
         # Taproot requires that the y coordinate of the public key is even.
         pubkey = PubKey(pubkey.x, btc.secp256k1.P - pubkey.y)
-    tag = bytearray(hashlib.sha256('TapTweak'.encode()).digest())
-    tag_data = tag + tag + pubkey.x.to_bytes(32)
-    tag_hash = bytearray(hashlib.sha256(tag_data).digest())
-    tweak_prikey = btc.secp256k1.Fr(int.from_bytes(tag_hash))
+    tweak_prikey = btc.secp256k1.Fr(int.from_bytes(hashtag('TapTweak', pubkey.x.to_bytes(32))))
     tweak_pubkey = btc.secp256k1.G * tweak_prikey
     tweak_pubkey = btc.secp256k1.Pt(btc.secp256k1.Fq(pubkey.x), btc.secp256k1.Fq(pubkey.y)) + tweak_pubkey
     return btc.bech32m.encode(btc.config.current.prefix.bech32, 1, bytearray(tweak_pubkey.x.x.to_bytes(32)))
@@ -411,7 +408,7 @@ class Transaction:
         data.extend(bytearray([sighash, 0x00, 0x00, 0x00]))
         return hash256(data)
 
-    def digest_segwit_v1(self, i: int, sighash: int, extflag: int):
+    def digest_segwit_v1(self, i: int, sighash: int):
         # See: https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki#common-signature-message
         data = bytearray()
         data.append(0x00)
@@ -449,11 +446,11 @@ class Transaction:
                 snap.extend(compact_size_encode(len(e.script_pubkey)))
                 snap.extend(e.script_pubkey)
             data.extend(bytearray(hashlib.sha256(snap).digest()))
-        data.append(extflag * 2)
+        data.append(0x00)
         if sighash & sighash_anyone_can_pay:
             data.extend(self.vin[i].out_point.txid)
             data.extend(self.vin[i].out_point.vout.to_bytes(4, 'little'))
-            tx_out_result = btc.rpc.get_tx_out(self.vin[i].out_point.txid[::-1].hex(), e.out_point.vout)
+            tx_out_result = btc.rpc.get_tx_out(self.vin[i].out_point.txid[::-1].hex(), self.vin[i].out_point.vout)
             value = tx_out_result['value'] * btc.denomination.bitcoin
             value = int(value.to_integral_exact())
             data.extend(value.to_bytes(8, 'little'))
@@ -461,14 +458,17 @@ class Transaction:
             data.extend(compact_size_encode(len(script_pubkey)))
             data.extend(script_pubkey)
             data.extend(self.vin[i].sequence.to_bytes(4, 'little'))
-        if sighash & sighash_anyone_can_pay == 0x00:
+        else:
             data.extend(i.to_bytes(4, 'little'))
         if sighash & 3 == sighash_single:
-            snap = bytearray()
-            snap.extend(self.vout[i].value.to_bytes(8, 'little'))
-            snap.extend(compact_size_encode(len(self.vout[i].script_pubkey)))
-            snap.extend(self.vout[i].script_pubkey)
-            data.extend(bytearray(hashlib.sha256(snap).digest()))
+            if i < len(self.vout):
+                snap = bytearray()
+                snap.extend(self.vout[i].value.to_bytes(8, 'little'))
+                snap.extend(compact_size_encode(len(self.vout[i].script_pubkey)))
+                snap.extend(self.vout[i].script_pubkey)
+                data.extend(bytearray(hashlib.sha256(snap).digest()))
+            else:
+                data.extend(bytearray(32))
         return hashtag('TapSighash', data)
 
     def json(self):

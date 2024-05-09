@@ -146,7 +146,8 @@ class Wallet:
         assert self.script_type == btc.core.script_type_p2tr
         for i, e in enumerate(tx.vin):
             prikey = btc.secp256k1.Fr(self.prikey.n)
-            m = btc.secp256k1.Fr(int.from_bytes(tx.digest_segwit_v1(i, btc.core.sighash_all, 0)))
+            prikey = prikey + btc.secp256k1.Fr(int.from_bytes(btc.core.hashtag('TapTweak', self.pubkey.x.to_bytes(32))))
+            m = btc.secp256k1.Fr(int.from_bytes(tx.digest_segwit_v1(i, btc.core.sighash_all)))
             r, s = btc.schnorr.sign(prikey, m)
             e.witness[0] = bytearray(r.x.x.to_bytes(32) + s.x.to_bytes(32)) + bytearray([btc.core.sighash_all])
         return tx
