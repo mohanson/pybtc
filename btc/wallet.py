@@ -2,6 +2,8 @@ import btc
 import json
 import typing
 
+import btc.secp256k1
+
 
 class WalletTransactionAnalyzer:
     def __init__(self, tx: btc.core.Transaction):
@@ -121,7 +123,7 @@ class Wallet:
         script_sig = bytearray([0x16, 0x00, 0x14]) + pubkey_hash
         for i, e in enumerate(tx.vin):
             e.script_sig = script_sig
-            r, s, _ = self.prikey.sign(tx.digest_segwit(i, script_code, btc.core.sighash_all))
+            r, s, _ = self.prikey.sign(tx.digest_segwit_v0(i, script_code, btc.core.sighash_all))
             g = btc.core.der_encode(r, s) + bytearray([btc.core.sighash_all])
             e.witness[0] = g
             e.witness[1] = self.pubkey.sec()
@@ -133,14 +135,21 @@ class Wallet:
         pubkey_hash = btc.core.hash160(self.pubkey.sec())
         script_code = bytearray([0x19, 0x76, 0xa9, 0x14]) + pubkey_hash + bytearray([0x88, 0xac])
         for i, e in enumerate(tx.vin):
-            r, s, _ = self.prikey.sign(tx.digest_segwit(i, script_code, btc.core.sighash_all))
+            r, s, _ = self.prikey.sign(tx.digest_segwit_v0(i, script_code, btc.core.sighash_all))
             g = btc.core.der_encode(r, s) + bytearray([btc.core.sighash_all])
             e.witness[0] = g
             e.witness[1] = self.pubkey.sec()
         return tx
 
     def sign_p2tr(self, tx: btc.core.Transaction):
-        pass
+        # See: https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki
+        assert self.script_type == btc.core.script_type_p2tr
+        for i, e in enumerate(tx.vin):
+            prikey = btc.secp256k1.Fr(self.prikey.n)
+            m = btc.secp256k1.Fr(int.from_bytes(tx.digest_segwit_v1(i, btc.core.sighash_all, 0)))
+            r, s = btc.schnorr.sign(prikey, m)
+            e.witness[0] = bytearray(r.x.x.to_bytes(32) + s.x.to_bytes(32)) + bytearray([btc.core.sighash_all])
+        return tx
 
     def transfer(self, script: bytearray, value: int):
         sender_value = 0
@@ -182,6 +191,7 @@ class Wallet:
         if self.script_type == btc.core.script_type_p2tr:
             self.sign_p2tr(tx)
         WalletTransactionAnalyzer(tx).analyze()
+        print(tx)
         txid = bytearray.fromhex(btc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
         return txid
 
