@@ -216,6 +216,23 @@ def compact_size_decode_reader(reader: typing.BinaryIO) -> int:
     raise Exception
 
 
+class HashType:
+    def __init__(self, n: int):
+        assert n in [
+            sighash_default,
+            sighash_all,
+            sighash_none,
+            sighash_single,
+            sighash_anyone_can_pay | sighash_all,
+            sighash_anyone_can_pay | sighash_none,
+            sighash_anyone_can_pay | sighash_single,
+        ]
+        self.i = n & sighash_anyone_can_pay
+        self.o = n & 0x3
+        if n == sighash_default:
+            self.i = sighash_all
+
+
 class OutPoint:
     def __init__(self, txid: bytearray, vout: int):
         assert len(txid) == 32
@@ -324,9 +341,10 @@ class Transaction:
     def copy(self):
         return Transaction(self.version, [i.copy() for i in self.vin], [o.copy() for o in self.vout], self.locktime)
 
-    def digest_legacy(self, i: int, sighash: int):
+    def digest_legacy(self, i: int, hash_type: int):
         # The legacy signing algorithm is used to create signatures that will unlock non-segwit locking scripts.
         # See: https://learnmeabitcoin.com/technical/keys/signature/
+        ht = HashType(hash_type)
         tx = self.copy()
         for e in tx.vin:
             e.script_sig = bytearray()
@@ -334,32 +352,31 @@ class Transaction:
         tx_out_result = btc.rpc.get_tx_out(tx.vin[i].out_point.txid[::-1].hex(), tx.vin[i].out_point.vout)
         script_pubkey = bytearray.fromhex(tx_out_result['scriptPubKey']['hex'])
         tx.vin[i].script_sig = script_pubkey
-        if sighash & sighash_anyone_can_pay:
+        if ht.i == sighash_anyone_can_pay:
             tx.vin = [tx.vin[i]]
-        if sighash & 0x1f == sighash_all:
-            pass
-        if sighash & 0x1f == sighash_none:
+        if ht.o == sighash_none:
             tx.vout = []
-        if sighash & 0x1f == sighash_single:
+        if ht.o == sighash_single:
             tx.vout = [tx.vout[i]]
         data = tx.serialize_legacy()
         # Append signature hash type to transaction data. The most common is SIGHASH_ALL (0x01), which indicates that
         # the signature covers all of the inputs and outputs in the transaction. This means that nobody else can add
         # any additional inputs or outputs to it later on.
         # The sighash when appended to the transaction data is 4 bytes and in little-endian byte order.
-        data.extend(bytearray([sighash, 0x00, 0x00, 0x00]))
+        data.extend(bytearray([hash_type, 0x00, 0x00, 0x00]))
         return hash256(data)
 
-    def digest_segwit_v0(self, i: int, script_code: bytearray, sighash: int):
+    def digest_segwit_v0(self, i: int, script_code: bytearray, hash_type: int):
         # A new transaction digest algorithm for signature verification in version 0 witness program, in order to
         # minimize redundant data hashing in verification, and to cover the input value by the signature.
         # See: https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki
+        ht = HashType(hash_type)
         data = bytearray()
         # Append version of the transaction.
         data.extend(self.version.to_bytes(4, 'little'))
         # Append hash prevouts.
         hash = bytearray(32)
-        if sighash & sighash_anyone_can_pay == 0x00:
+        if ht.i != sighash_anyone_can_pay:
             snap = bytearray()
             for e in self.vin:
                 snap.extend(e.out_point.txid)
@@ -368,7 +385,7 @@ class Transaction:
         data.extend(hash)
         # Append hash sequence.
         hash = bytearray(32)
-        if sighash == sighash_all:
+        if ht.i != sighash_anyone_can_pay and ht.o == sighash_all:
             snap = bytearray()
             for e in self.vin:
                 snap.extend(e.sequence.to_bytes(4, 'little'))
@@ -388,14 +405,14 @@ class Transaction:
         data.extend(self.vin[i].sequence.to_bytes(4, 'little'))
         # Append hash outputs.
         hash = bytearray(32)
-        if sighash & 0x1f == sighash_all:
+        if ht.o == sighash_all:
             snap = bytearray()
             for e in self.vout:
                 snap.extend(e.value.to_bytes(8, 'little'))
                 snap.extend(compact_size_encode(len(e.script_pubkey)))
                 snap.extend(e.script_pubkey)
             hash = hash256(snap)
-        if sighash & 0x1f == sighash_single and i < len(self.vout):
+        if ht.o == sighash_single and i < len(self.vout):
             snap = bytearray()
             snap.extend(self.vout[i].value.to_bytes(8, 'little'))
             snap.extend(compact_size_encode(len(self.vout[i].script_pubkey)))
@@ -405,22 +422,29 @@ class Transaction:
         # Append locktime of the transaction.
         data.extend(self.locktime.to_bytes(4, 'little'))
         # Append sighash type of the signature.
-        data.extend(bytearray([sighash, 0x00, 0x00, 0x00]))
+        data.extend(bytearray([hash_type, 0x00, 0x00, 0x00]))
         return hash256(data)
 
-    def digest_segwit_v1(self, i: int, sighash: int):
+    def digest_segwit_v1(self, i: int, hash_type: int):
         # See: https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki#common-signature-message
+        ht = HashType(hash_type)
         data = bytearray()
+        # This prefix is called the sighash epoch, and allows reusing the hashTapSighash tagged hash in future
+        # signature algorithms that make invasive changes to how hashing is performed (as opposed to the ext_flag
+        # mechanism that is used for incremental extensions). An alternative is having them use a different tag, but
+        # supporting a growing number of tags may become undesirable.
         data.append(0x00)
-        data.append(sighash)
+        data.append(hash_type)
         data.extend(self.version.to_bytes(4, 'little'))
         data.extend(self.locktime.to_bytes(4, 'little'))
-        if sighash & sighash_anyone_can_pay == 0x00:
+        if ht.i != sighash_anyone_can_pay:
+            # Append the SHA256 of the serialization of all input outpoints.
             snap = bytearray()
             for e in self.vin:
                 snap.extend(e.out_point.txid)
                 snap.extend(e.out_point.vout.to_bytes(4, 'little'))
             data.extend(bytearray(hashlib.sha256(snap).digest()))
+            # Append the SHA256 of the serialization of all input amounts.
             snap = bytearray()
             for e in self.vin:
                 tx_out_result = btc.rpc.get_tx_out(e.out_point.txid[::-1].hex(), e.out_point.vout)
@@ -428,6 +452,7 @@ class Transaction:
                 value = int(value.to_integral_exact())
                 snap.extend(value.to_bytes(8, 'little'))
             data.extend(bytearray(hashlib.sha256(snap).digest()))
+            # Append the SHA256 of all spent outputs' scriptPubKeys, serialized as script inside CTxOut.
             snap = bytearray()
             for e in self.vin:
                 tx_out_result = btc.rpc.get_tx_out(e.out_point.txid[::-1].hex(), e.out_point.vout)
@@ -435,11 +460,12 @@ class Transaction:
                 snap.extend(compact_size_encode(len(script_pubkey)))
                 snap.extend(script_pubkey)
             data.extend(bytearray(hashlib.sha256(snap).digest()))
+            # Append the SHA256 of the serialization of all input nSequence.
             snap = bytearray()
             for e in self.vin:
                 snap.extend(e.sequence.to_bytes(4, 'little'))
             data.extend(bytearray(hashlib.sha256(snap).digest()))
-        if sighash & 2 == 0x00:
+        if ht.o == sighash_all:
             snap = bytearray()
             for e in self.vout:
                 snap.extend(e.value.to_bytes(8, 'little'))
@@ -447,7 +473,7 @@ class Transaction:
                 snap.extend(e.script_pubkey)
             data.extend(bytearray(hashlib.sha256(snap).digest()))
         data.append(0x00)
-        if sighash & sighash_anyone_can_pay:
+        if ht.i == sighash_anyone_can_pay:
             data.extend(self.vin[i].out_point.txid)
             data.extend(self.vin[i].out_point.vout.to_bytes(4, 'little'))
             tx_out_result = btc.rpc.get_tx_out(self.vin[i].out_point.txid[::-1].hex(), self.vin[i].out_point.vout)
@@ -458,17 +484,16 @@ class Transaction:
             data.extend(compact_size_encode(len(script_pubkey)))
             data.extend(script_pubkey)
             data.extend(self.vin[i].sequence.to_bytes(4, 'little'))
-        else:
+        if ht.i != sighash_anyone_can_pay:
             data.extend(i.to_bytes(4, 'little'))
-        if sighash & 3 == sighash_single:
-            if i < len(self.vout):
-                snap = bytearray()
-                snap.extend(self.vout[i].value.to_bytes(8, 'little'))
-                snap.extend(compact_size_encode(len(self.vout[i].script_pubkey)))
-                snap.extend(self.vout[i].script_pubkey)
-                data.extend(bytearray(hashlib.sha256(snap).digest()))
-            else:
-                data.extend(bytearray(32))
+        if ht.o == sighash_single:
+            snap = bytearray()
+            # Using SIGHASH_SINGLE without a "corresponding output" (an output with the same index as the input being
+            # verified) cause validation failure.
+            snap.extend(self.vout[i].value.to_bytes(8, 'little'))
+            snap.extend(compact_size_encode(len(self.vout[i].script_pubkey)))
+            snap.extend(self.vout[i].script_pubkey)
+            data.extend(bytearray(hashlib.sha256(snap).digest()))
         return hashtag('TapSighash', data)
 
     def json(self):
