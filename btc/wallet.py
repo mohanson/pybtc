@@ -191,7 +191,6 @@ class Wallet:
         if self.script_type == btc.core.script_type_p2tr:
             self.sign_p2tr(tx)
         WalletTransactionAnalyzer(tx).analyze()
-        print(tx)
         txid = bytearray.fromhex(btc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
         return txid
 
