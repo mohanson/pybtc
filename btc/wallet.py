@@ -28,9 +28,9 @@ class WalletTransactionAnalyzer:
 
 
 class WalletUtxo:
-    def __init__(self, out_point: btc.core.OutPoint, value: int):
+    def __init__(self, out_point: btc.core.OutPoint, out: btc.core.TxOut):
         self.out_point = out_point
-        self.value = value
+        self.out = out
 
     def __repr__(self):
         return json.dumps(self.json())
@@ -38,13 +38,13 @@ class WalletUtxo:
     def __eq__(self, other):
         return all([
             self.out_point == other.out_point,
-            self.value == other.value,
+            self.out == other.out,
         ])
 
     def json(self):
         return {
             'out_point': self.out_point.json(),
-            'value': self.value,
+            'out': self.out.json(),
         }
 
 
@@ -56,9 +56,11 @@ class WalletUtxoSearchFromBitcoinCore:
         r = []
         for e in btc.rpc.list_unspent([addr]):
             out_point = btc.core.OutPoint(bytearray.fromhex(e['txid'])[::-1], e['vout'])
-            value = e['amount'] * btc.denomination.bitcoin
-            value = int(value.to_integral_exact())
-            wallet_utxo = WalletUtxo(out_point, value)
+            script_pubkey = bytearray.fromhex(e['scriptPubKey'])
+            amount = e['amount'] * btc.denomination.bitcoin
+            amount = int(amount.to_integral_exact())
+            out = btc.core.TxOut(amount, script_pubkey)
+            wallet_utxo = WalletUtxo(out_point, out)
             r.append(wallet_utxo)
         return r
 
@@ -91,7 +93,7 @@ class Wallet:
         ])
 
     def balance(self):
-        return sum([e.value for e in self.unspent()])
+        return sum([e.out.value for e in self.unspent()])
 
     def json(self):
         return {
@@ -175,7 +177,7 @@ class Wallet:
             if self.script_type == btc.core.script_type_p2tr:
                 txin.witness = [bytearray(65)]
             tx.vin.append(txin)
-            sender_value += utxo.value
+            sender_value += utxo.out.value
             change_value = sender_value - accept_value - tx.vbytes() * fr
             # How was the dust limit of 546 satoshis was chosen?
             # See: https://bitcoin.stackexchange.com/questions/86068
@@ -215,7 +217,7 @@ class Wallet:
             if self.script_type == btc.core.script_type_p2tr:
                 txin.witness = [bytearray(65)]
             tx.vin.append(txin)
-            sender_value += utxo.value
+            sender_value += utxo.out.value
         accept_value = sender_value - tx.vbytes() * fr
         assert accept_value >= 546
         tx.vout[0].value = accept_value
