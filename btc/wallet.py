@@ -2,8 +2,6 @@ import btc
 import json
 import typing
 
-import btc.secp256k1
-
 
 class WalletTransactionAnalyzer:
     def __init__(self, tx: btc.core.Transaction):

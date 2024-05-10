@@ -1,4 +1,4 @@
-import btc.base58
+import btc
 import random
 
 

@@ -1,4 +1,4 @@
-import btc.ripemd160
+import btc
 
 
 def test_ripemd160():

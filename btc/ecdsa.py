@@ -1,4 +1,4 @@
-import btc.secp256k1
+import btc
 import itertools
 import random
 import typing

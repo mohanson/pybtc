@@ -1,6 +1,5 @@
-import btc.config
-import btc.ripemd160
 import btc.secp256k1
+import btc
 import hashlib
 import math
 import io
@@ -28,9 +27,7 @@ def hash256(data: bytearray) -> bytearray:
 
 
 def hashtag(name: str, data: bytearray) -> bytearray:
-    tag = bytearray(hashlib.sha256(name.encode()).digest())
-    out = bytearray(hashlib.sha256(tag + tag + data).digest())
-    return out
+    return btc.schnorr.hash(name, data)
 
 
 class PriKey:
