@@ -164,7 +164,7 @@ def address_p2tr(pubkey: PubKey) -> str:
     tweak_prikey = btc.secp256k1.Fr(int.from_bytes(hashtag('TapTweak', pubkey.x.to_bytes(32))))
     tweak_pubkey = btc.secp256k1.G * tweak_prikey
     tweak_pubkey = btc.secp256k1.Pt(btc.secp256k1.Fq(pubkey.x), btc.secp256k1.Fq(pubkey.y)) + tweak_pubkey
-    return btc.bech32m.encode(btc.config.current.prefix.bech32, 1, bytearray(tweak_pubkey.x.x.to_bytes(32)))
+    return btc.bech32.encode(btc.config.current.prefix.bech32, 1, bytearray(tweak_pubkey.x.x.to_bytes(32)))
 
 
 def address(pubkey: PubKey, script_type: int) -> str:
@@ -622,12 +622,12 @@ def script_pubkey_p2sh(addr: str) -> bytearray:
 
 
 def script_pubkey_p2wpkh(addr: str) -> bytearray:
-    _, hash = btc.bech32.decode(btc.config.current.prefix.bech32, addr)
+    hash = btc.bech32.decode(btc.config.current.prefix.bech32, 0, addr)
     return bytearray([0x00, 0x14]) + hash
 
 
 def script_pubkey_p2tr(addr: str) -> bytearray:
-    _, pubx = btc.bech32m.decode(btc.config.current.prefix.bech32, addr)
+    pubx = btc.bech32.decode(btc.config.current.prefix.bech32, 1, addr)
     return bytearray([0x51, 0x20]) + pubx
 
 
