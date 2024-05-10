@@ -256,6 +256,13 @@ class OutPoint:
             'vout': self.vout,
         }
 
+    def load(self):
+        rpcret = btc.rpc.get_tx_out(self.txid[::-1].hex(), self.vout)
+        script_pubkey = bytearray.fromhex(rpcret['scriptPubKey']['hex'])
+        amount = rpcret['value'] * btc.denomination.bitcoin
+        amount = int(amount.to_integral_exact())
+        return TxOut(amount, script_pubkey)
+
 
 class TxIn:
     def __init__(self, out_point: OutPoint, script_sig: bytearray, sequence: int, witness: typing.List[bytearray]):
@@ -346,9 +353,7 @@ class Transaction:
         for e in tx.vin:
             e.script_sig = bytearray()
         # Put the script_pubkey as a placeholder in the script_sig.
-        tx_out_result = btc.rpc.get_tx_out(tx.vin[i].out_point.txid[::-1].hex(), tx.vin[i].out_point.vout)
-        script_pubkey = bytearray.fromhex(tx_out_result['scriptPubKey']['hex'])
-        tx.vin[i].script_sig = script_pubkey
+        tx.vin[i].script_sig = tx.vin[i].out_point.load().script_pubkey
         if ht.i == sighash_anyone_can_pay:
             tx.vin = [tx.vin[i]]
         if ht.o == sighash_none:
@@ -394,10 +399,7 @@ class Transaction:
         # Append script code of the input.
         data.extend(script_code)
         # Append value of the output spent by this input.
-        tx_out_result = btc.rpc.get_tx_out(self.vin[i].out_point.txid[::-1].hex(), self.vin[i].out_point.vout)
-        value = tx_out_result['value'] * btc.denomination.bitcoin
-        value = int(value.to_integral_exact())
-        data.extend(value.to_bytes(8, 'little'))
+        data.extend(self.vin[i].out_point.load().value.to_bytes(8, 'little'))
         # Append sequence of the input.
         data.extend(self.vin[i].sequence.to_bytes(4, 'little'))
         # Append hash outputs.
@@ -444,18 +446,15 @@ class Transaction:
             # Append the SHA256 of the serialization of all input amounts.
             snap = bytearray()
             for e in self.vin:
-                tx_out_result = btc.rpc.get_tx_out(e.out_point.txid[::-1].hex(), e.out_point.vout)
-                value = tx_out_result['value'] * btc.denomination.bitcoin
-                value = int(value.to_integral_exact())
-                snap.extend(value.to_bytes(8, 'little'))
+                utxo = e.out_point.load()
+                snap.extend(utxo.value.to_bytes(8, 'little'))
             data.extend(bytearray(hashlib.sha256(snap).digest()))
             # Append the SHA256 of all spent outputs' scriptPubKeys, serialized as script inside CTxOut.
             snap = bytearray()
             for e in self.vin:
-                tx_out_result = btc.rpc.get_tx_out(e.out_point.txid[::-1].hex(), e.out_point.vout)
-                script_pubkey = bytearray.fromhex(tx_out_result['scriptPubKey']['hex'])
-                snap.extend(compact_size_encode(len(script_pubkey)))
-                snap.extend(script_pubkey)
+                utxo = e.out_point.load()
+                snap.extend(compact_size_encode(len(utxo.script_pubkey)))
+                snap.extend(utxo.script_pubkey)
             data.extend(bytearray(hashlib.sha256(snap).digest()))
             # Append the SHA256 of the serialization of all input nSequence.
             snap = bytearray()
@@ -473,13 +472,10 @@ class Transaction:
         if ht.i == sighash_anyone_can_pay:
             data.extend(self.vin[i].out_point.txid)
             data.extend(self.vin[i].out_point.vout.to_bytes(4, 'little'))
-            tx_out_result = btc.rpc.get_tx_out(self.vin[i].out_point.txid[::-1].hex(), self.vin[i].out_point.vout)
-            value = tx_out_result['value'] * btc.denomination.bitcoin
-            value = int(value.to_integral_exact())
-            data.extend(value.to_bytes(8, 'little'))
-            script_pubkey = bytearray.fromhex(tx_out_result['scriptPubKey']['hex'])
-            data.extend(compact_size_encode(len(script_pubkey)))
-            data.extend(script_pubkey)
+            utxo = self.vin[i].out_point.load()
+            data.extend(utxo.value.to_bytes(8, 'little'))
+            data.extend(compact_size_encode(len(utxo.script_pubkey)))
+            data.extend(utxo.script_pubkey)
             data.extend(self.vin[i].sequence.to_bytes(4, 'little'))
         if ht.i != sighash_anyone_can_pay:
             data.extend(i.to_bytes(4, 'little'))

@@ -13,10 +13,8 @@ class WalletTransactionAnalyzer:
         sender_value = 0
         output_value = 0
         for e in self.tx.vin:
-            tx_out_result = btc.rpc.get_tx_out(e.out_point.txid[::-1].hex(), e.out_point.vout)
-            value = tx_out_result['value'] * btc.denomination.bitcoin
-            value = int(value.to_integral_exact())
-            sender_value += value
+            o = e.out_point.load()
+            sender_value += o.value
         for e in self.tx.vout:
             output_value += e.value
         assert sender_value - output_value <= self.tx.vbytes() * 50
