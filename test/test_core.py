@@ -59,6 +59,24 @@ def test_address_p2pkh():
     assert addr == 'mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r'
 
 
+def test_address_p2sh():
+    # https://en.bitcoin.it/wiki/Pay_to_script_hash
+    # https://mempool.space/tx/40eee3ae1760e3a8532263678cdf64569e6ad06abc133af64f735e52562bccc8
+    btc.config.current = btc.config.mainnet
+    pubkey = bytearray()
+    pubkey.append(0x04)
+    pubkey.extend(bytearray.fromhex('2f90074d7a5bf30c72cf3a8dfd1381bdbd30407010e878f3a11269d5f74a5878'))
+    pubkey.extend(bytearray.fromhex('8505cdca22ea6eab7cfb40dc0e07aba200424ab0d79122a653ad0c7ec9896bdf'))
+    redeem = btc.core.script([
+        btc.opcode.op_1,
+        btc.opcode.op_pushdata(pubkey),
+        btc.opcode.op_1,
+        btc.opcode.op_checkmultisig,
+    ])
+    addr = btc.core.address_p2sh(redeem)
+    assert addr == '3P14159f73E4gFr7JterCCQh9QjiTjiZrG'
+
+
 def test_address_p2sh_p2wpkh():
     btc.config.current = btc.config.mainnet
     prikey = btc.core.PriKey(1)

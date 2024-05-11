@@ -136,15 +136,21 @@ def address_p2pkh(pubkey: PubKey) -> str:
     return btc.base58.encode(data + chk4)
 
 
+def address_p2sh(redeem: bytearray) -> str:
+    # Pay to Script Hash.
+    # See: https://github.com/bitcoin/bips/blob/master/bip-0016.mediawiki
+    redeem_hash = hash160(redeem)
+    data = bytearray([btc.config.current.prefix.p2sh]) + redeem_hash
+    chk4 = hash256(data)[:4]
+    return btc.base58.encode(data + chk4)
+
+
 def address_p2sh_p2wpkh(pubkey: PubKey) -> str:
     # Nested Segwit.
     # See https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki
     pubkey_hash = hash160(pubkey.sec())
     redeem_script = script([btc.opcode.op_0, btc.opcode.op_pushdata(pubkey_hash)])
-    redeem_hash = hash160(redeem_script)
-    data = bytearray([btc.config.current.prefix.p2sh]) + redeem_hash
-    chk4 = hash256(data)[:4]
-    return btc.base58.encode(data + chk4)
+    return address_p2sh(redeem_script)
 
 
 def address_p2wpkh(pubkey: PubKey) -> str:
