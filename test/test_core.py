@@ -77,6 +77,17 @@ def test_address_p2sh():
     assert addr == '3P14159f73E4gFr7JterCCQh9QjiTjiZrG'
 
 
+def test_address_p2sh_multisig():
+    btc.config.current = btc.config.develop
+    keys = [btc.core.PubKey.sec_decode(bytearray.fromhex(e)) for e in [
+        '03150176a55b6d77eec5740c1f87f434cf416d5bbde1704bd816288a4466afb7bb',
+        '02c3b2d3baf90e559346895b43253407fbb345c146910837b61f301f4c9a7edfe5',
+        '02c6e3e94f7ff77457da9e76cf0779ca7c1e8575db064a2ea55400e6a9d8190225',
+    ]]
+    addr = btc.core.address_p2sh_multisig(2, keys)
+    assert addr == '2MyxShnGQ5NifGb8CHYrtmzosRySxZ9pZo5'
+
+
 def test_address_p2sh_p2wpkh():
     btc.config.current = btc.config.mainnet
     prikey = btc.core.PriKey(1)

@@ -145,6 +145,17 @@ def address_p2sh(redeem: bytearray) -> str:
     return btc.base58.encode(data + chk4)
 
 
+def address_p2sh_multisig(n: int, pubkey: typing.List[PubKey]) -> str:
+    redeem_script = []
+    redeem_script.append(btc.opcode.op_n(n))
+    for e in pubkey:
+        redeem_script.append(btc.opcode.op_pushdata(e.sec()))
+    redeem_script.append(btc.opcode.op_n(len(pubkey)))
+    redeem_script.append(btc.opcode.op_checkmultisig)
+    redeem_script = script(redeem_script)
+    return address_p2sh(redeem_script)
+
+
 def address_p2sh_p2wpkh(pubkey: PubKey) -> str:
     # Nested Segwit.
     # See https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki
