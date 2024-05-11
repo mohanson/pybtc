@@ -131,9 +131,9 @@ class PubKey:
 def address_p2pkh(pubkey: PubKey) -> str:
     # Legacy
     pubkey_hash = hash160(pubkey.sec())
-    version = bytearray([btc.config.current.prefix.p2pkh])
-    checksum = hash256(version + pubkey_hash)
-    address = btc.base58.encode(version + pubkey_hash + checksum[:4])
+    prefix = bytearray([btc.config.current.prefix.p2pkh])
+    checksum = hash256(prefix + pubkey_hash)
+    address = btc.base58.encode(prefix + pubkey_hash + checksum[:4])
     return address
 
 
@@ -141,10 +141,11 @@ def address_p2sh(pubkey: PubKey) -> str:
     # Nested Segwit.
     # See https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki
     pubkey_hash = hash160(pubkey.sec())
-    redeem_hash = hash160(bytearray([0x00, 0x14]) + pubkey_hash)
-    version = bytearray([btc.config.current.prefix.p2sh])
-    checksum = hash256(version + redeem_hash)
-    address = btc.base58.encode(version + redeem_hash + checksum[:4])
+    redeem_script = script([btc.opcode.op_0, btc.opcode.op_pushdata(pubkey_hash)])
+    redeem_script_hash = hash160(redeem_script)
+    prefix = bytearray([btc.config.current.prefix.p2sh])
+    checksum = hash256(prefix + redeem_script_hash)
+    address = btc.base58.encode(prefix + redeem_script_hash + checksum[:4])
     return address
 
 
@@ -368,7 +369,7 @@ class Transaction:
         data.extend(bytearray([hash_type, 0x00, 0x00, 0x00]))
         return hash256(data)
 
-    def digest_segwit_v0(self, i: int, script_code: bytearray, hash_type: int):
+    def digest_segwit_v0(self, i: int, hash_type: int, script_code: bytearray):
         # A new transaction digest algorithm for signature verification in version 0 witness program, in order to
         # minimize redundant data hashing in verification, and to cover the input value by the signature.
         # See: https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki
@@ -610,7 +611,13 @@ def script_pubkey_p2pkh(addr: str) -> bytearray:
     assert data[0] == btc.config.current.prefix.p2pkh
     hash = data[0x01:0x15]
     assert btc.core.hash256(data[0x00:0x15])[:4] == data[0x15:0x19]
-    return bytearray([0x76, 0xa9, 0x14]) + hash + bytearray([0x88, 0xac])
+    return script([
+        btc.opcode.op_dup,
+        btc.opcode.op_hash160,
+        btc.opcode.op_pushdata(hash),
+        btc.opcode.op_equalverify,
+        btc.opcode.op_checksig,
+    ])
 
 
 def script_pubkey_p2sh(addr: str) -> bytearray:
@@ -618,17 +625,27 @@ def script_pubkey_p2sh(addr: str) -> bytearray:
     assert data[0] == btc.config.current.prefix.p2sh
     hash = data[0x01:0x15]
     assert btc.core.hash256(data[0x00:0x15])[:4] == data[0x15:0x19]
-    return bytearray([0xa9, 0x14]) + hash + bytearray([0x87])
+    return script([
+        btc.opcode.op_hash160,
+        btc.opcode.op_pushdata(hash),
+        btc.opcode.op_equal,
+    ])
 
 
 def script_pubkey_p2wpkh(addr: str) -> bytearray:
     hash = btc.bech32.decode(btc.config.current.prefix.bech32, 0, addr)
-    return bytearray([0x00, 0x14]) + hash
+    return script([
+        btc.opcode.op_0,
+        btc.opcode.op_pushdata(hash),
+    ])
 
 
 def script_pubkey_p2tr(addr: str) -> bytearray:
     pubx = btc.bech32.decode(btc.config.current.prefix.bech32, 1, addr)
-    return bytearray([0x51, 0x20]) + pubx
+    return script([
+        btc.opcode.op_1,
+        btc.opcode.op_pushdata(pubx),
+    ])
 
 
 def script_pubkey(addr: str) -> bytearray:
@@ -642,6 +659,16 @@ def script_pubkey(addr: str) -> bytearray:
     if btc.base58.decode(addr)[0] == btc.config.current.prefix.p2sh:
         return script_pubkey_p2sh(addr)
     raise Exception
+
+
+def script(i: typing.List[int | bytearray]) -> bytearray:
+    r = bytearray()
+    for e in i:
+        if isinstance(e, int):
+            r.append(e)
+        if isinstance(e, bytearray):
+            r.extend(e)
+    return r
 
 
 def der_encode(r: btc.secp256k1.Fr, s: btc.secp256k1.Fr) -> bytearray:
