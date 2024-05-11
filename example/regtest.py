@@ -17,7 +17,7 @@ for d in [
         'timestamp': 0,
     }])
 btc.rpc.generate_to_address(10, btc.core.address_p2pkh(btc.core.PriKey(1).pubkey()))
-btc.rpc.generate_to_address(10, btc.core.address_p2sh(btc.core.PriKey(1).pubkey()))
+btc.rpc.generate_to_address(10, btc.core.address_p2sh_p2wpkh(btc.core.PriKey(1).pubkey()))
 btc.rpc.generate_to_address(10, btc.core.address_p2wpkh(btc.core.PriKey(1).pubkey()))
 btc.rpc.generate_to_address(10, btc.core.address_p2tr(btc.core.PriKey(1).pubkey()))
 btc.rpc.generate_to_address(99, btc.core.address_p2pkh(btc.core.PriKey(1).pubkey()))

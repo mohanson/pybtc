@@ -18,7 +18,7 @@ if args.net == 'testnet':
 prikey = btc.core.PriKey(int(args.prikey, 0))
 pubkey = prikey.pubkey()
 
-print('p2pkh ', btc.core.address_p2pkh(pubkey))
-print('p2sh  ', btc.core.address_p2sh(pubkey))
-print('p2wpkh', btc.core.address_p2wpkh(pubkey))
-print('p2tr  ', btc.core.address_p2tr(pubkey))
+print('p2pkh      ', btc.core.address_p2pkh(pubkey))
+print('p2sh-p2wpkh', btc.core.address_p2sh_p2wpkh(pubkey))
+print('p2wpkh     ', btc.core.address_p2wpkh(pubkey))
+print('p2tr       ', btc.core.address_p2tr(pubkey))

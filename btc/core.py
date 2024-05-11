@@ -13,7 +13,7 @@ sighash_single = 0x03
 sighash_anyone_can_pay = 0x80
 
 script_type_p2pkh = 0x01
-script_type_p2sh = 0x02
+script_type_p2sh_p2wpkh = 0x02
 script_type_p2wpkh = 0x03
 script_type_p2tr = 0x04
 
@@ -131,22 +131,20 @@ class PubKey:
 def address_p2pkh(pubkey: PubKey) -> str:
     # Legacy
     pubkey_hash = hash160(pubkey.sec())
-    prefix = bytearray([btc.config.current.prefix.p2pkh])
-    checksum = hash256(prefix + pubkey_hash)
-    address = btc.base58.encode(prefix + pubkey_hash + checksum[:4])
-    return address
+    data = bytearray([btc.config.current.prefix.p2pkh]) + pubkey_hash
+    chk4 = hash256(data)[:4]
+    return btc.base58.encode(data + chk4)
 
 
-def address_p2sh(pubkey: PubKey) -> str:
+def address_p2sh_p2wpkh(pubkey: PubKey) -> str:
     # Nested Segwit.
     # See https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki
     pubkey_hash = hash160(pubkey.sec())
     redeem_script = script([btc.opcode.op_0, btc.opcode.op_pushdata(pubkey_hash)])
-    redeem_script_hash = hash160(redeem_script)
-    prefix = bytearray([btc.config.current.prefix.p2sh])
-    checksum = hash256(prefix + redeem_script_hash)
-    address = btc.base58.encode(prefix + redeem_script_hash + checksum[:4])
-    return address
+    redeem_hash = hash160(redeem_script)
+    data = bytearray([btc.config.current.prefix.p2sh]) + redeem_hash
+    chk4 = hash256(data)[:4]
+    return btc.base58.encode(data + chk4)
 
 
 def address_p2wpkh(pubkey: PubKey) -> str:
@@ -171,8 +169,8 @@ def address_p2tr(pubkey: PubKey) -> str:
 def address(pubkey: PubKey, script_type: int) -> str:
     if script_type == script_type_p2pkh:
         return address_p2pkh(pubkey)
-    if script_type == script_type_p2sh:
-        return address_p2sh(pubkey)
+    if script_type == script_type_p2sh_p2wpkh:
+        return address_p2sh_p2wpkh(pubkey)
     if script_type == script_type_p2wpkh:
         return address_p2wpkh(pubkey)
     if script_type == script_type_p2tr:

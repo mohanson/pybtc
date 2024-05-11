@@ -65,7 +65,7 @@ class Wallet:
     def __init__(self, prikey: int, script_type: int):
         assert script_type in [
             btc.core.script_type_p2pkh,
-            btc.core.script_type_p2sh,
+            btc.core.script_type_p2sh_p2wpkh,
             btc.core.script_type_p2wpkh,
             btc.core.script_type_p2tr,
         ]
@@ -98,7 +98,7 @@ class Wallet:
             'addr': self.addr,
             'script_type': {
                 btc.core.script_type_p2pkh: 'p2pkh',
-                btc.core.script_type_p2sh: 'p2sh',
+                btc.core.script_type_p2sh_p2wpkh: 'p2sh-p2wpkh',
                 btc.core.script_type_p2wpkh: 'p2wpkh',
                 btc.core.script_type_p2tr: 'p2tr',
             }[self.script_type],
@@ -116,9 +116,9 @@ class Wallet:
             ])
         return tx
 
-    def sign_p2sh(self, tx: btc.core.Transaction):
+    def sign_p2sh_p2wpkh(self, tx: btc.core.Transaction):
         # See: https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#p2wpkh-nested-in-bip16-p2sh
-        assert self.script_type == btc.core.script_type_p2sh
+        assert self.script_type == btc.core.script_type_p2sh_p2wpkh
         pubkey_hash = btc.core.hash160(self.pubkey.sec())
         script_code = btc.core.script([
             btc.opcode.op_pushdata(btc.core.script([
@@ -185,7 +185,7 @@ class Wallet:
             txin = btc.core.TxIn(utxo.out_point, bytearray(), 0xffffffff, [])
             if self.script_type == btc.core.script_type_p2pkh:
                 txin.script_sig = bytearray(107)
-            if self.script_type == btc.core.script_type_p2sh:
+            if self.script_type == btc.core.script_type_p2sh_p2wpkh:
                 txin.script_sig = bytearray(23)
                 txin.witness = [bytearray(72), bytearray(33)]
             if self.script_type == btc.core.script_type_p2wpkh:
@@ -203,8 +203,8 @@ class Wallet:
         tx.vout[1].value = change_value
         if self.script_type == btc.core.script_type_p2pkh:
             self.sign_p2pkh(tx)
-        if self.script_type == btc.core.script_type_p2sh:
-            self.sign_p2sh(tx)
+        if self.script_type == btc.core.script_type_p2sh_p2wpkh:
+            self.sign_p2sh_p2wpkh(tx)
         if self.script_type == btc.core.script_type_p2wpkh:
             self.sign_p2wpkh(tx)
         if self.script_type == btc.core.script_type_p2tr:
@@ -225,7 +225,7 @@ class Wallet:
             txin = btc.core.TxIn(utxo.out_point, bytearray(), 0xffffffff, [])
             if self.script_type == btc.core.script_type_p2pkh:
                 txin.script_sig = bytearray(107)
-            if self.script_type == btc.core.script_type_p2sh:
+            if self.script_type == btc.core.script_type_p2sh_p2wpkh:
                 txin.script_sig = bytearray(23)
                 txin.witness = [bytearray(72), bytearray(33)]
             if self.script_type == btc.core.script_type_p2wpkh:
@@ -239,8 +239,8 @@ class Wallet:
         tx.vout[0].value = accept_value
         if self.script_type == btc.core.script_type_p2pkh:
             self.sign_p2pkh(tx)
-        if self.script_type == btc.core.script_type_p2sh:
-            self.sign_p2sh(tx)
+        if self.script_type == btc.core.script_type_p2sh_p2wpkh:
+            self.sign_p2sh_p2wpkh(tx)
         if self.script_type == btc.core.script_type_p2wpkh:
             self.sign_p2wpkh(tx)
         if self.script_type == btc.core.script_type_p2tr:

@@ -59,14 +59,14 @@ def test_address_p2pkh():
     assert addr == 'mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r'
 
 
-def test_address_p2sh():
+def test_address_p2sh_p2wpkh():
     btc.config.current = btc.config.mainnet
     prikey = btc.core.PriKey(1)
     pubkey = prikey.pubkey()
-    addr = btc.core.address_p2sh(pubkey)
+    addr = btc.core.address_p2sh_p2wpkh(pubkey)
     assert addr == '3JvL6Ymt8MVWiCNHC7oWU6nLeHNJKLZGLN'
     btc.config.current = btc.config.testnet
-    addr = btc.core.address_p2sh(pubkey)
+    addr = btc.core.address_p2sh_p2wpkh(pubkey)
     assert addr == '2NAUYAHhujozruyzpsFRP63mbrdaU5wnEpN'
 
 
