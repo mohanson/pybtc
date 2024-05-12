@@ -23,7 +23,7 @@ for d in [
         'timestamp': 0,
     }])
 btc.rpc.generate_to_address(10, btc.core.address_p2pkh(pub1))
-btc.rpc.generate_to_address(10, btc.core.address_p2sh_multisig(2, [pub1, pub2]))
+btc.rpc.generate_to_address(10, btc.core.address_p2sh_p2ms(2, [pub1, pub2]))
 btc.rpc.generate_to_address(10, btc.core.address_p2sh_p2wpkh(pub1))
 btc.rpc.generate_to_address(10, btc.core.address_p2wpkh(pub1))
 btc.rpc.generate_to_address(10, btc.core.address_p2tr(pub1))

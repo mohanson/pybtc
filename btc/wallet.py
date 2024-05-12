@@ -81,7 +81,7 @@ class Tp2pkh:
 
     def sign(self, tx: btc.core.Transaction):
         for i, e in enumerate(tx.vin):
-            r, s, _ = self.prikey.sign(tx.digest_legacy(i, btc.core.sighash_all))
+            r, s, _ = self.prikey.sign(tx.digest_legacy(i, btc.core.sighash_all, e.out_point.load().script_pubkey))
             g = btc.core.der_encode(r, s) + bytearray([btc.core.sighash_all])
             e.script_sig = btc.core.script([
                 btc.opcode.op_pushdata(g),
@@ -90,6 +90,51 @@ class Tp2pkh:
 
     def txin(self, op: btc.core.OutPoint):
         return btc.core.TxIn(op, bytearray(107), 0xffffffff, [])
+
+
+class Tp2shp2ms:
+    def __init__(self, prikey: typing.List[int]):
+        self.prikey = [btc.core.PriKey(e) for e in prikey]
+        self.pubkey = [e.pubkey() for e in self.prikey]
+        redeem_script = []
+        redeem_script.append(btc.opcode.op_n(len(prikey)))
+        for e in self.pubkey:
+            redeem_script.append(btc.opcode.op_pushdata(e.sec()))
+        redeem_script.append(btc.opcode.op_n(len(prikey)))
+        redeem_script.append(btc.opcode.op_checkmultisig)
+        self.redeem = btc.core.script(redeem_script)
+        self.addr = btc.core.address_p2sh(self.redeem)
+        self.script = btc.core.script_pubkey_p2sh(self.addr)
+
+    def __repr__(self):
+        return json.dumps(self.json())
+
+    def json(self):
+        return {
+            'prikey': [e.json() for e in self.prikey],
+            'pubkey': [e.json() for e in self.pubkey],
+            'addr': self.addr,
+            'script': self.script.hex(),
+        }
+
+    def sign(self, tx: btc.core.Transaction):
+        for i, e in enumerate(tx.vin):
+            script_sig = []
+            script_sig.append(btc.opcode.op_0)
+            for prikey in self.prikey:
+                r, s, _ = prikey.sign(tx.digest_legacy(i, btc.core.sighash_all, self.redeem))
+                g = btc.core.der_encode(r, s) + bytearray([btc.core.sighash_all])
+                script_sig.append(btc.opcode.op_pushdata(g))
+            script_sig.append(btc.opcode.op_pushdata(self.redeem))
+            e.script_sig = btc.core.script(script_sig)
+
+    def txin(self, op: btc.core.OutPoint):
+        script_sig = []
+        script_sig.append(btc.opcode.op_0)
+        for _ in range(len(self.prikey)):
+            script_sig.append(btc.opcode.op_pushdata(bytearray(72)))
+        script_sig.append(btc.opcode.op_pushdata(self.redeem))
+        return btc.core.TxIn(op, btc.core.script(script_sig), 0xffffffff, [])
 
 
 class Tp2shp2wpkh:
@@ -207,7 +252,7 @@ class Tp2tr:
         return btc.core.TxIn(op, bytearray(), 0xffffffff, [bytearray(65)])
 
 
-T = Tp2pkh | Tp2shp2wpkh | Tp2wpkh | Tp2tr
+T = Tp2pkh | Tp2shp2ms | Tp2shp2wpkh | Tp2wpkh | Tp2tr
 
 
 class Wallet:

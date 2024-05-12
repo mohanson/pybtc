@@ -6,12 +6,14 @@ def test_wallet_transfer():
     btc.config.current = btc.config.develop
     user_list = [
         btc.wallet.Wallet(btc.wallet.Tp2pkh(1)),
+        btc.wallet.Wallet(btc.wallet.Tp2shp2ms([1, 2])),
         btc.wallet.Wallet(btc.wallet.Tp2shp2wpkh(1)),
         btc.wallet.Wallet(btc.wallet.Tp2wpkh(1)),
         btc.wallet.Wallet(btc.wallet.Tp2tr(1)),
     ]
     mate_list = [
         btc.wallet.Wallet(btc.wallet.Tp2pkh(2)),
+        btc.wallet.Wallet(btc.wallet.Tp2shp2ms([2, 1])),
         btc.wallet.Wallet(btc.wallet.Tp2shp2wpkh(2)),
         btc.wallet.Wallet(btc.wallet.Tp2wpkh(2)),
         btc.wallet.Wallet(btc.wallet.Tp2tr(2)),
