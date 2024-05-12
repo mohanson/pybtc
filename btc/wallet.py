@@ -3,8 +3,8 @@ import json
 import typing
 
 
-class WalletTransactionAnalyzer:
-    # WalletTransactionAnalyzer is a simple transaction analyzer to reject transactions that are obviously wrong.
+class Analyzer:
+    # Analyzer is a simple transaction analyzer to reject transactions that are obviously wrong.
     def __init__(self, tx: btc.core.Transaction):
         self.tx = tx
 
@@ -24,7 +24,7 @@ class WalletTransactionAnalyzer:
         self.analyze_mining_fee()
 
 
-class WalletUtxo:
+class Utxo:
     def __init__(self, out_point: btc.core.OutPoint, out: btc.core.TxOut):
         self.out_point = out_point
         self.out = out
@@ -45,20 +45,19 @@ class WalletUtxo:
         }
 
 
-class WalletUtxoSearchCore:
+class Searcher:
     def __init__(self):
         pass
 
-    def unspent(self, addr: str) -> typing.List[WalletUtxo]:
+    def unspent(self, addr: str) -> typing.List[Utxo]:
         r = []
         for e in btc.rpc.list_unspent([addr]):
             out_point = btc.core.OutPoint(bytearray.fromhex(e['txid'])[::-1], e['vout'])
             script_pubkey = bytearray.fromhex(e['scriptPubKey'])
             amount = e['amount'] * btc.denomination.bitcoin
             amount = int(amount.to_integral_exact())
-            out = btc.core.TxOut(amount, script_pubkey)
-            wallet_utxo = WalletUtxo(out_point, out)
-            r.append(wallet_utxo)
+            utxo = Utxo(out_point, btc.core.TxOut(amount, script_pubkey))
+            r.append(utxo)
         return r
 
 
@@ -75,7 +74,7 @@ class Wallet:
         self.addr = btc.core.address(self.pubkey, script_type)
         self.script_type = script_type
         self.script = btc.core.script_pubkey(self.addr)
-        self.search = WalletUtxoSearchCore()
+        self.search = Searcher()
 
     def __repr__(self):
         return json.dumps(self.json())
@@ -201,7 +200,7 @@ class Wallet:
             self.sign_p2wpkh(tx)
         if self.script_type == btc.core.script_type_p2tr:
             self.sign_p2tr(tx)
-        WalletTransactionAnalyzer(tx).analyze()
+        Analyzer(tx).analyze()
         txid = bytearray.fromhex(btc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
         return txid
 
@@ -237,9 +236,9 @@ class Wallet:
             self.sign_p2wpkh(tx)
         if self.script_type == btc.core.script_type_p2tr:
             self.sign_p2tr(tx)
-        WalletTransactionAnalyzer(tx).analyze()
+        Analyzer(tx).analyze()
         txid = bytearray.fromhex(btc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
         return txid
 
-    def unspent(self) -> typing.List[WalletUtxo]:
+    def unspent(self) -> typing.List[Utxo]:
         return self.search.unspent(self.addr)
