@@ -12,11 +12,6 @@ sighash_none = 0x02
 sighash_single = 0x03
 sighash_anyone_can_pay = 0x80
 
-script_type_p2pkh = 0x01
-script_type_p2sh_p2wpkh = 0x02
-script_type_p2wpkh = 0x03
-script_type_p2tr = 0x04
-
 
 def hash160(data: bytearray) -> bytearray:
     return bytearray(btc.ripemd160.ripemd160(hashlib.sha256(data).digest()).digest())
@@ -145,7 +140,7 @@ def address_p2sh(redeem: bytearray) -> str:
     return btc.base58.encode(data + chk4)
 
 
-def address_p2sh_multisig(n: int, pubkey: typing.List[PubKey]) -> str:
+def address_p2sh_p2ms(n: int, pubkey: typing.List[PubKey]) -> str:
     redeem_script = []
     redeem_script.append(btc.opcode.op_n(n))
     for e in pubkey:
@@ -181,18 +176,6 @@ def address_p2tr(pubkey: PubKey) -> str:
     tweak_pubkey = btc.secp256k1.G * tweak_prikey
     tweak_pubkey = btc.secp256k1.Pt(btc.secp256k1.Fq(pubkey.x), btc.secp256k1.Fq(pubkey.y)) + tweak_pubkey
     return btc.bech32.encode(btc.config.current.prefix.bech32, 1, bytearray(tweak_pubkey.x.x.to_bytes(32)))
-
-
-def address(pubkey: PubKey, script_type: int) -> str:
-    if script_type == script_type_p2pkh:
-        return address_p2pkh(pubkey)
-    if script_type == script_type_p2sh_p2wpkh:
-        return address_p2sh_p2wpkh(pubkey)
-    if script_type == script_type_p2wpkh:
-        return address_p2wpkh(pubkey)
-    if script_type == script_type_p2tr:
-        return address_p2tr(pubkey)
-    raise Exception
 
 
 def compact_size_encode(n: int) -> bytearray:
@@ -361,7 +344,7 @@ class Transaction:
     def copy(self):
         return Transaction(self.version, [i.copy() for i in self.vin], [o.copy() for o in self.vout], self.locktime)
 
-    def digest_legacy(self, i: int, hash_type: int):
+    def digest_legacy(self, i: int, hash_type: int, script_code: bytearray):
         # The legacy signing algorithm is used to create signatures that will unlock non-segwit locking scripts.
         # See: https://learnmeabitcoin.com/technical/keys/signature/
         ht = HashType(hash_type)
@@ -369,7 +352,8 @@ class Transaction:
         for e in tx.vin:
             e.script_sig = bytearray()
         # Put the script_pubkey as a placeholder in the script_sig.
-        tx.vin[i].script_sig = tx.vin[i].out_point.load().script_pubkey
+        # If the output is a P2SH output, then we need to use the redeem script.
+        tx.vin[i].script_sig = script_code
         if ht.i == sighash_anyone_can_pay:
             tx.vin = [tx.vin[i]]
         if ht.o == sighash_none:

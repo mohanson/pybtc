@@ -32,7 +32,7 @@ $ python example/addr.py --net mainnet --prikey 1
 
 **example/transfer.py**
 
-Transfer bitcoin to another account. Pybtc has implemented a bitcoin core utxo searcher by default, you can refer to the Test chapter to configure the bitcoin core regtest node. Supports all four types of Bitcoin transactions: P2PKH, P2SH-P2WPKH, P2WPKH and P2TR.
+Transfer bitcoin to another account. Pybtc has implemented a bitcoin core utxo searcher by default, you can refer to the Test chapter to configure the bitcoin core regtest node. Supports four common types of Bitcoin transactions: P2PKH, P2SH-P2WPKH, P2WPKH and P2TR. For more complex account types, such as P2SH-P2MS, you can refer to [test/test_wallet.py](test/test_wallet.py)
 
 ```sh
 $ python example/transfer.py --net develop --prikey 1 --script-type p2pkh --to mg8Jz5776UdyiYcBb9Z873NTozEiADRW5H --value 0.1
@@ -40,7 +40,7 @@ $ python example/transfer.py --net develop --prikey 1 --script-type p2pkh --to m
 # 0x039d1b0fe969d33341a7db9ddd236f632d6851292200603abc5a6c7738bf3079
 ```
 
-You can implement the utxo searcher yourself so you don't have to rely on the bitcoin core wallet. Reference: [btc.wallet.WalletUtxoSearchFromBitcoinCore](btc/wallet.py)
+You can implement the utxo searcher yourself so you don't have to rely on the bitcoin core wallet. Reference: [btc.wallet.Searcher](btc/wallet.py)
 
 ## Test
 

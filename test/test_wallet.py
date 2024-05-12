@@ -4,15 +4,21 @@ import itertools
 
 def test_wallet_transfer():
     btc.config.current = btc.config.develop
-    script_type_list = [
-        btc.core.script_type_p2pkh,
-        btc.core.script_type_p2sh_p2wpkh,
-        btc.core.script_type_p2wpkh,
-        btc.core.script_type_p2tr
+    user_list = [
+        btc.wallet.Wallet(btc.wallet.Tp2pkh(1)),
+        btc.wallet.Wallet(btc.wallet.Tp2shp2ms([btc.core.PriKey(e).pubkey() for e in [1, 2]], [1, 2])),
+        btc.wallet.Wallet(btc.wallet.Tp2shp2wpkh(1)),
+        btc.wallet.Wallet(btc.wallet.Tp2wpkh(1)),
+        btc.wallet.Wallet(btc.wallet.Tp2tr(1)),
     ]
-    for user_type, mate_type in itertools.product(script_type_list, script_type_list):
-        user = btc.wallet.Wallet(1, user_type)
-        mate = btc.wallet.Wallet(2, mate_type)
+    mate_list = [
+        btc.wallet.Wallet(btc.wallet.Tp2pkh(2)),
+        btc.wallet.Wallet(btc.wallet.Tp2shp2ms([btc.core.PriKey(e).pubkey() for e in [2, 1]], [2, 1])),
+        btc.wallet.Wallet(btc.wallet.Tp2shp2wpkh(2)),
+        btc.wallet.Wallet(btc.wallet.Tp2wpkh(2)),
+        btc.wallet.Wallet(btc.wallet.Tp2tr(2)),
+    ]
+    for user, mate in itertools.product(user_list, mate_list):
         value = btc.denomination.bitcoin
         value_old = mate.balance()
         txid = user.transfer(mate.script, value)
