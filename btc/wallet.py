@@ -75,7 +75,7 @@ class Wallet:
         self.addr = btc.core.address(self.pubkey, script_type)
         self.script_type = script_type
         self.script = btc.core.script_pubkey(self.addr)
-        self.utxo = WalletUtxoSearchCore()
+        self.search = WalletUtxoSearchCore()
 
     def __repr__(self):
         return json.dumps(self.json())
@@ -251,4 +251,4 @@ class Wallet:
         return txid
 
     def unspent(self) -> typing.List[WalletUtxo]:
-        return self.utxo.unspent(self.addr)
+        return self.search.unspent(self.addr)
