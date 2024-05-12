@@ -80,15 +80,6 @@ class Wallet:
     def __repr__(self):
         return json.dumps(self.json())
 
-    def __eq__(self, other):
-        return all([
-            self.prikey == other.prikey,
-            self.pubkey == other.pubkey,
-            self.addr == other.addr,
-            self.script_type == other.script_type,
-            self.script == other.script,
-        ])
-
     def balance(self):
         return sum([e.out.value for e in self.unspent()])
 
