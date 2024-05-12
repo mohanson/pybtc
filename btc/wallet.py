@@ -4,6 +4,7 @@ import typing
 
 
 class WalletTransactionAnalyzer:
+    # WalletTransactionAnalyzer is a simple transaction analyzer to reject transactions that are obviously wrong.
     def __init__(self, tx: btc.core.Transaction):
         self.tx = tx
 
@@ -44,7 +45,7 @@ class WalletUtxo:
         }
 
 
-class WalletUtxoSearchFromBitcoinCore:
+class WalletUtxoSearchCore:
     def __init__(self):
         pass
 
@@ -74,7 +75,7 @@ class Wallet:
         self.addr = btc.core.address(self.pubkey, script_type)
         self.script_type = script_type
         self.script = btc.core.script_pubkey(self.addr)
-        self.utxo = WalletUtxoSearchFromBitcoinCore()
+        self.utxo = WalletUtxoSearchCore()
 
     def __repr__(self):
         return json.dumps(self.json())
