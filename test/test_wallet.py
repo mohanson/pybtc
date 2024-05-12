@@ -5,16 +5,16 @@ import itertools
 def test_wallet_transfer():
     btc.config.current = btc.config.develop
     user_list = [
-        btc.wallet.Wallet(1, btc.core.script_type_p2pkh),
-        btc.wallet.Wallet(1, btc.core.script_type_p2sh_p2wpkh),
-        btc.wallet.Wallet(1, btc.core.script_type_p2wpkh),
-        btc.wallet.Wallet(1, btc.core.script_type_p2tr),
+        btc.wallet.Wallet(btc.wallet.Tp2pkh(1)),
+        btc.wallet.Wallet(btc.wallet.Tp2shp2wpkh(1)),
+        btc.wallet.Wallet(btc.wallet.Tp2wpkh(1)),
+        btc.wallet.Wallet(btc.wallet.Tp2tr(1)),
     ]
     mate_list = [
-        btc.wallet.Wallet(2, btc.core.script_type_p2pkh),
-        btc.wallet.Wallet(2, btc.core.script_type_p2sh_p2wpkh),
-        btc.wallet.Wallet(2, btc.core.script_type_p2wpkh),
-        btc.wallet.Wallet(2, btc.core.script_type_p2tr),
+        btc.wallet.Wallet(btc.wallet.Tp2pkh(2)),
+        btc.wallet.Wallet(btc.wallet.Tp2shp2wpkh(2)),
+        btc.wallet.Wallet(btc.wallet.Tp2wpkh(2)),
+        btc.wallet.Wallet(btc.wallet.Tp2tr(2)),
     ]
     for user, mate in itertools.product(user_list, mate_list):
         value = btc.denomination.bitcoin

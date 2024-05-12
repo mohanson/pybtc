@@ -30,6 +30,13 @@ if args.script_type == 'p2tr':
 accept_script = btc.core.script_pubkey(args.to)
 accept_value = int(args.value * btc.denomination.bitcoin)
 prikey = int(args.prikey, 0)
-wallet = btc.wallet.Wallet(prikey, script_type)
+if args.script_type == 'p2pkh':
+    wallet = btc.wallet.Wallet(btc.wallet.Tp2pkh(prikey))
+if args.script_type == 'p2sh-p2wpkh':
+    wallet = btc.wallet.Wallet(btc.wallet.Tp2shp2wpkh(prikey))
+if args.script_type == 'p2wpkh':
+    wallet = btc.wallet.Wallet(btc.wallet.Tp2wpkh(prikey))
+if args.script_type == 'p2tr':
+    wallet = btc.wallet.Wallet(btc.wallet.Tp2tr(prikey))
 txid = wallet.transfer(accept_script, accept_value)
 print(f'0x{txid.hex()}')

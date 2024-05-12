@@ -40,7 +40,7 @@ $ python example/transfer.py --net develop --prikey 1 --script-type p2pkh --to m
 # 0x039d1b0fe969d33341a7db9ddd236f632d6851292200603abc5a6c7738bf3079
 ```
 
-You can implement the utxo searcher yourself so you don't have to rely on the bitcoin core wallet. Reference: [btc.wallet.WalletUtxoSearchFromBitcoinCore](btc/wallet.py)
+You can implement the utxo searcher yourself so you don't have to rely on the bitcoin core wallet. Reference: [btc.wallet.Searcher](btc/wallet.py)
 
 ## Test
 
