@@ -172,10 +172,10 @@ def address_p2tr(pubkey: PubKey) -> str:
     if pubkey.y & 1 != 0:
         # Taproot requires that the y coordinate of the public key is even.
         pubkey = PubKey(pubkey.x, btc.secp256k1.P - pubkey.y)
-    tweak_prikey = btc.secp256k1.Fr(int.from_bytes(hashtag('TapTweak', pubkey.x.to_bytes(32))))
-    tweak_pubkey = btc.secp256k1.G * tweak_prikey
-    tweak_pubkey = btc.secp256k1.Pt(btc.secp256k1.Fq(pubkey.x), btc.secp256k1.Fq(pubkey.y)) + tweak_pubkey
-    return btc.bech32.encode(btc.config.current.prefix.bech32, 1, bytearray(tweak_pubkey.x.x.to_bytes(32)))
+    adjust_prikey = btc.secp256k1.Fr(int.from_bytes(hashtag('TapTweak', pubkey.x.to_bytes(32))))
+    adjust_pubkey = btc.secp256k1.G * adjust_prikey
+    output_pubkey = btc.secp256k1.Pt(btc.secp256k1.Fq(pubkey.x), btc.secp256k1.Fq(pubkey.y)) + adjust_pubkey
+    return btc.bech32.encode(btc.config.current.prefix.bech32, 1, bytearray(output_pubkey.x.x.to_bytes(32)))
 
 
 def compact_size_encode(n: int) -> bytearray:
