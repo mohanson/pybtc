@@ -9,8 +9,9 @@ class Analyzer:
         self.tx = tx
 
     def analyze_mining_fee(self):
-        # Make sure the transaction fee is less than 50 satoshi per byte. This is a rough check, but works well in most
-        # cases.
+        # Make sure the transaction fee is less than 50 satoshi per byte. An excessive fee, also called an absurd fee,
+        # is any fee rate that's significantly higher than the amount that fee rate estimators currently expect is
+        # necessary to get a transaction confirmed in the next block.
         sender_value = 0
         output_value = 0
         for e in self.tx.vin:
