@@ -247,7 +247,7 @@ class Tp2tr:
         adjust_prikey = btc.secp256k1.Fr(int.from_bytes(adjust_prikey_byte))
         output_prikey = prikey + adjust_prikey
         for i, e in enumerate(tx.vin):
-            m = btc.secp256k1.Fr(int.from_bytes(tx.digest_segwit_v1(i, btc.core.sighash_all)))
+            m = btc.secp256k1.Fr(int.from_bytes(tx.digest_segwit_v1(i, btc.core.sighash_all, bytearray())))
             r, s = btc.schnorr.sign(output_prikey, m)
             e.witness[0] = bytearray(r.x.x.to_bytes(32) + s.x.to_bytes(32)) + bytearray([btc.core.sighash_all])
         return tx

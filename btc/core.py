@@ -424,7 +424,7 @@ class Transaction:
         data.extend(bytearray([hash_type, 0x00, 0x00, 0x00]))
         return hash256(data)
 
-    def digest_segwit_v1(self, i: int, hash_type: int):
+    def digest_segwit_v1(self, i: int, hash_type: int, script_code: bytearray):
         # See: https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki#common-signature-message
         ht = HashType(hash_type)
         data = bytearray()
@@ -468,7 +468,10 @@ class Transaction:
                 snap.extend(compact_size_encode(len(e.script_pubkey)))
                 snap.extend(e.script_pubkey)
             data.extend(bytearray(hashlib.sha256(snap).digest()))
-        data.append(0x00)
+        spend_type = 0x00
+        if script_code:
+            spend_type |= 0x2
+        data.append(spend_type)
         if ht.i == sighash_anyone_can_pay:
             data.extend(self.vin[i].out_point.txid)
             data.extend(self.vin[i].out_point.vout.to_bytes(4, 'little'))
@@ -487,15 +490,22 @@ class Transaction:
             snap.extend(compact_size_encode(len(self.vout[i].script_pubkey)))
             snap.extend(self.vout[i].script_pubkey)
             data.extend(bytearray(hashlib.sha256(snap).digest()))
-        # What is the output length of SigMsg()? The total length of SigMsg() can be computed using the following
-        # formula: 174 - is_anyonecanpay * 49 - is_none * 32 + has_annex * 32.
+        # See: https://github.com/bitcoin/bips/blob/master/bip-0342.mediawiki
+        if script_code:
+            snap = bytearray()
+            snap.append(0xc0)
+            snap.extend(compact_size_encode(len(script_code)))
+            snap.extend(script_code)
+            data.extend(hashtag('TapLeaf', snap))
+            data.append(0x00)
+            data.extend(0xffffffff.to_bytes(4, 'little'))
         size = 1 + 174
         if ht.i == sighash_anyone_can_pay:
             size -= 49
         if ht.o == sighash_none:
             size -= 32
-        if False:
-            size += 32
+        if script_code:
+            size += 37
         assert len(data) == size
         return hashtag('TapSighash', data)
 
