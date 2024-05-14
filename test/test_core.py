@@ -114,10 +114,10 @@ def test_address_p2tr():
     btc.config.current = btc.config.mainnet
     prikey = btc.core.PriKey(1)
     pubkey = prikey.pubkey()
-    addr = btc.core.address_p2tr(pubkey)
+    addr = btc.core.address_p2tr(pubkey, bytearray())
     assert addr == 'bc1pmfr3p9j00pfxjh0zmgp99y8zftmd3s5pmedqhyptwy6lm87hf5sspknck9'
     btc.config.current = btc.config.testnet
-    addr = btc.core.address_p2tr(pubkey)
+    addr = btc.core.address_p2tr(pubkey, bytearray())
     assert addr == 'tb1pmfr3p9j00pfxjh0zmgp99y8zftmd3s5pmedqhyptwy6lm87hf5ssk79hv2'
 
 

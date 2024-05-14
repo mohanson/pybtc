@@ -166,13 +166,16 @@ def address_p2wpkh(pubkey: PubKey) -> str:
     return btc.bech32.encode(btc.config.current.prefix.bech32, 0, pubkey_hash)
 
 
-def address_p2tr(pubkey: PubKey) -> str:
+def address_p2tr(pubkey: PubKey, root: bytearray) -> str:
     # Taproot.
     # See https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki
     if pubkey.y & 1 != 0:
         # Taproot requires that the y coordinate of the public key is even.
         pubkey = PubKey(pubkey.x, btc.secp256k1.P - pubkey.y)
-    adjust_prikey = btc.secp256k1.Fr(int.from_bytes(hashtag('TapTweak', bytearray(pubkey.x.to_bytes(32)))))
+    # There is no script path if root is empty.
+    assert len(root) in [0x00, 0x20]
+    adjust_prikey_byte = hashtag('TapTweak', bytearray(pubkey.x.to_bytes(32)) + root)
+    adjust_prikey = btc.secp256k1.Fr(int.from_bytes(adjust_prikey_byte))
     adjust_pubkey = btc.secp256k1.G * adjust_prikey
     output_pubkey = btc.secp256k1.Pt(btc.secp256k1.Fq(pubkey.x), btc.secp256k1.Fq(pubkey.y)) + adjust_pubkey
     return btc.bech32.encode(btc.config.current.prefix.bech32, 1, bytearray(output_pubkey.x.x.to_bytes(32)))

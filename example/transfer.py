@@ -28,6 +28,6 @@ if args.script_type == 'p2sh-p2wpkh':
 if args.script_type == 'p2wpkh':
     wallet = btc.wallet.Wallet(btc.wallet.Tp2wpkh(prikey))
 if args.script_type == 'p2tr':
-    wallet = btc.wallet.Wallet(btc.wallet.Tp2tr(prikey))
+    wallet = btc.wallet.Wallet(btc.wallet.Tp2tr(prikey, bytearray()))
 txid = wallet.transfer(accept_script, accept_value)
 print(f'0x{txid.hex()}')

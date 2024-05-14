@@ -223,10 +223,11 @@ class Tp2wpkh:
 
 
 class Tp2tr:
-    def __init__(self, prikey: int):
+    def __init__(self, prikey: int, root: bytearray):
         self.prikey = btc.core.PriKey(prikey)
         self.pubkey = self.prikey.pubkey()
-        self.addr = btc.core.address_p2tr(self.pubkey)
+        self.root = root
+        self.addr = btc.core.address_p2tr(self.pubkey, root)
         self.script = btc.core.script_pubkey_p2tr(self.addr)
 
     def __repr__(self):
@@ -243,7 +244,7 @@ class Tp2tr:
     def sign(self, tx: btc.core.Transaction):
         # See: https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki
         prikey = btc.secp256k1.Fr(self.prikey.n)
-        adjust_prikey_byte = btc.core.hashtag('TapTweak', bytearray(self.pubkey.x.to_bytes(32)))
+        adjust_prikey_byte = btc.core.hashtag('TapTweak', bytearray(self.pubkey.x.to_bytes(32)) + self.root)
         adjust_prikey = btc.secp256k1.Fr(int.from_bytes(adjust_prikey_byte))
         output_prikey = prikey + adjust_prikey
         for i, e in enumerate(tx.vin):
