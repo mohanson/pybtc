@@ -487,6 +487,16 @@ class Transaction:
             snap.extend(compact_size_encode(len(self.vout[i].script_pubkey)))
             snap.extend(self.vout[i].script_pubkey)
             data.extend(bytearray(hashlib.sha256(snap).digest()))
+        # What is the output length of SigMsg()? The total length of SigMsg() can be computed using the following
+        # formula: 174 - is_anyonecanpay * 49 - is_none * 32 + has_annex * 32.
+        size = 1 + 174
+        if ht.i == sighash_anyone_can_pay:
+            size -= 49
+        if ht.o == sighash_none:
+            size -= 32
+        if False:
+            size += 32
+        assert len(data) == size
         return hashtag('TapSighash', data)
 
     def json(self):
