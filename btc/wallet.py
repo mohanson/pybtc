@@ -243,7 +243,8 @@ class Tp2tr:
     def sign(self, tx: btc.core.Transaction):
         # See: https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki
         prikey = btc.secp256k1.Fr(self.prikey.n)
-        adjust_prikey = btc.secp256k1.Fr(int.from_bytes(btc.core.hashtag('TapTweak', self.pubkey.x.to_bytes(32))))
+        adjust_prikey_byte = btc.core.hashtag('TapTweak', bytearray(self.pubkey.x.to_bytes(32)))
+        adjust_prikey = btc.secp256k1.Fr(int.from_bytes(adjust_prikey_byte))
         output_prikey = prikey + adjust_prikey
         for i, e in enumerate(tx.vin):
             m = btc.secp256k1.Fr(int.from_bytes(tx.digest_segwit_v1(i, btc.core.sighash_all)))
