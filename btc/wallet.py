@@ -226,8 +226,8 @@ class Tp2tr:
     def __init__(self, prikey: int, root: bytearray):
         self.prikey = btc.core.PriKey(prikey)
         self.pubkey = self.prikey.pubkey()
-        self.root = root
         self.addr = btc.core.address_p2tr(self.pubkey, root)
+        self.root = root
         self.script = btc.core.script_pubkey_p2tr(self.addr)
 
     def __repr__(self):
@@ -238,6 +238,7 @@ class Tp2tr:
             'prikey': self.prikey.json(),
             'pubkey': self.pubkey.json(),
             'addr': self.addr,
+            'root': self.root.hex(),
             'script': self.script.hex(),
         }
 
