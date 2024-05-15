@@ -32,7 +32,7 @@ $ python example/addr.py --net mainnet --prikey 1
 
 **example/taproot.py**
 
-This example shows how to create a P2TR script with two script spending path: p2pk and p2as.
+This example demonstrates how to create a P2TR script with two script spending paths: p2pk and p2as.
 
 ```sh
 $ python example/taproot.py
@@ -40,7 +40,7 @@ $ python example/taproot.py
 
 **example/transfer.py**
 
-Transfer bitcoin to another account. Pybtc has implemented a bitcoin core utxo searcher by default, you can refer to the Test chapter to configure the bitcoin core regtest node. Supports four common types of Bitcoin transactions: P2PKH, P2SH-P2WPKH, P2WPKH and P2TR. For more complex account types, such as P2SH-P2MS, you can refer to [test/test_wallet.py](test/test_wallet.py)
+Transfer Bitcoin to another account. Pybtc includes a default Bitcoin Core UTXO searcher. You can refer to the Test section for configuring the Bitcoin Core regtest node. Pybtc supports four common types of Bitcoin transactions: P2PKH, P2SH-P2WPKH, P2WPKH, and P2TR. For more complex account types, such as P2SH-P2MS, please refer to [test/test_wallet.py](test/test_wallet.py).
 
 ```sh
 $ python example/transfer.py --net develop --prikey 1 --script-type p2pkh --to mg8Jz5776UdyiYcBb9Z873NTozEiADRW5H --value 0.1
@@ -48,11 +48,11 @@ $ python example/transfer.py --net develop --prikey 1 --script-type p2pkh --to m
 # 0x039d1b0fe969d33341a7db9ddd236f632d6851292200603abc5a6c7738bf3079
 ```
 
-You can implement the utxo searcher yourself so you don't have to rely on the bitcoin core wallet. Reference: [btc.wallet.Searcher](btc/wallet.py)
+You can implement the UTXO searcher yourself to avoid relying on the Bitcoin Core wallet. Reference: [btc.wallet.Searcher](btc/wallet.py)
 
 ## Test
 
-The testing of this project depends on regtest. You can use the following steps to build the regtest node.
+The testing of this project relies on regtest. You can set up the regtest node using the following steps:
 
 ```sh
 $ wget https://bitcoincore.org/bin/bitcoin-core-27.0/bitcoin-27.0-x86_64-linux-gnu.tar.gz
