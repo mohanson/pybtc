@@ -9,14 +9,14 @@ def test_wallet_transfer():
         btc.wallet.Wallet(btc.wallet.Tp2shp2ms([btc.core.PriKey(e).pubkey() for e in [1, 2]], [1, 2])),
         btc.wallet.Wallet(btc.wallet.Tp2shp2wpkh(1)),
         btc.wallet.Wallet(btc.wallet.Tp2wpkh(1)),
-        btc.wallet.Wallet(btc.wallet.Tp2tr(1)),
+        btc.wallet.Wallet(btc.wallet.Tp2tr(1, bytearray())),
     ]
     mate_list = [
         btc.wallet.Wallet(btc.wallet.Tp2pkh(2)),
         btc.wallet.Wallet(btc.wallet.Tp2shp2ms([btc.core.PriKey(e).pubkey() for e in [2, 1]], [2, 1])),
         btc.wallet.Wallet(btc.wallet.Tp2shp2wpkh(2)),
         btc.wallet.Wallet(btc.wallet.Tp2wpkh(2)),
-        btc.wallet.Wallet(btc.wallet.Tp2tr(2)),
+        btc.wallet.Wallet(btc.wallet.Tp2tr(2, bytearray())),
     ]
     for user, mate in itertools.product(user_list, mate_list):
         value = btc.denomination.bitcoin

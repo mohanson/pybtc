@@ -30,6 +30,14 @@ $ python example/addr.py --net mainnet --prikey 1
 # p2tr        bc1pmfr3p9j00pfxjh0zmgp99y8zftmd3s5pmedqhyptwy6lm87hf5sspknck9
 ```
 
+**example/taproot.py**
+
+This example shows how to create a P2TR script with two script spending path: p2pk and p2as.
+
+```sh
+$ python example/taproot.py
+```
+
 **example/transfer.py**
 
 Transfer bitcoin to another account. Pybtc has implemented a bitcoin core utxo searcher by default, you can refer to the Test chapter to configure the bitcoin core regtest node. Supports four common types of Bitcoin transactions: P2PKH, P2SH-P2WPKH, P2WPKH and P2TR. For more complex account types, such as P2SH-P2MS, you can refer to [test/test_wallet.py](test/test_wallet.py)
