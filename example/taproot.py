@@ -15,7 +15,7 @@ class TapLeaf:
         self.script = script
 
 
-class TapBranch:
+class TapNode:
     def __init__(self, l: Self | TapLeaf, r: Self | TapLeaf):
         if l.hash < r.hash:
             self.hash = btc.core.hashtag('TapBranch', l.hash + r.hash)
@@ -27,7 +27,7 @@ class TapBranch:
 
 # Here created two scripts, one of which is a p2pk script, which requires that it can only be unlocked by private key 2,
 # and the other is an p2as(always success) script, which means that anyone can spend the utxo.
-mast = TapBranch(
+mast = TapNode(
     TapLeaf(btc.core.script([
         btc.opcode.op_pushdata(btc.core.PriKey(2).pubkey().sec()[1:]),
         btc.opcode.op_checksig,
@@ -98,19 +98,25 @@ btc.rpc.import_descriptors([{
 # Spending by key path.
 mate.transfer(user_p2tr.script, 1 * btc.denomination.bitcoin)
 assert user_p2tr.balance() == btc.denomination.bitcoin
+print('main: spending by key path')
 user_p2tr.transfer_all(mate.script)
 assert user_p2tr.balance() == 0
+print('main: spending by key path done')
 
 # Spending by script path: pay to public key.
 mate.transfer(user_p2tr.script, 1 * btc.denomination.bitcoin)
 assert user_p2tr.balance() == btc.denomination.bitcoin
 user_p2pk = btc.wallet.Wallet(Tp2trp2pk(user_p2tr.signer.pubkey))
+print('main: spending by script path p2pk')
 user_p2pk.transfer_all(mate.script)
 assert user_p2tr.balance() == 0
+print('main: spending by script path p2pk done')
 
 # Spending by script path: always success(op_1).
 mate.transfer(user_p2tr.script, 1 * btc.denomination.bitcoin)
 assert user_p2tr.balance() == btc.denomination.bitcoin
 user_p2as = btc.wallet.Wallet(Tp2trp2as(user_p2tr.signer.pubkey))
+print('main: spending by script path p2as')
 user_p2as.transfer_all(mate.script)
 assert user_p2tr.balance() == 0
+print('main: spending by script path p2as done')
