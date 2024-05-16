@@ -32,7 +32,7 @@ $ python example/addr.py --net mainnet --prikey 1
 
 **example/taproot.py**
 
-This example demonstrates how to create a P2TR script with two script spending paths: p2pk and p2as.
+This example demonstrates how to create a P2TR script with two script spending paths: p2pk and p2ms(2-of-2 multisig).
 
 ```sh
 $ python example/taproot.py

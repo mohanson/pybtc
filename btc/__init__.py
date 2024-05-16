@@ -9,4 +9,5 @@ from . import ripemd160
 from . import rpc
 from . import schnorr
 from . import secp256k1
+from . import taproot
 from . import wallet
