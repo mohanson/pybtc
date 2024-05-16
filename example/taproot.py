@@ -1,17 +1,22 @@
 import btc
 
-# This example shows how to create a P2TR script with two unlock conditions: p2pk and p2as.
+# This example shows how to create a P2TR script with two unlock conditions: p2pk and p2ms.
 
 
 # Here created two scripts, one of which is a p2pk script, which requires that it can only be unlocked by private key 2,
-# and the other is an p2as(always success) script, which means that anyone can spend the utxo.
+# and the other is an 2-of-2 multisig script.
 mast = btc.taproot.Node(
     btc.taproot.Leaf(btc.core.script([
         btc.opcode.op_pushdata(btc.core.PriKey(2).pubkey().sec()[1:]),
         btc.opcode.op_checksig,
     ])),
     btc.taproot.Leaf(btc.core.script([
-        btc.opcode.op_1
+        btc.opcode.op_pushdata(btc.core.PriKey(3).pubkey().sec()[1:]),
+        btc.opcode.op_checksig,
+        btc.opcode.op_pushdata(btc.core.PriKey(4).pubkey().sec()[1:]),
+        btc.opcode.op_checksigadd,
+        btc.opcode.op_n(2),
+        btc.opcode.op_equal,
     ]))
 )
 
@@ -42,7 +47,7 @@ class Tp2trp2pk:
         ])
 
 
-class Tp2trp2as:
+class Tp2trp2ms:
     def __init__(self, pubkey: btc.core.PubKey):
         self.pubkey = pubkey
         self.addr = btc.core.address_p2tr(pubkey, mast.hash)
@@ -55,10 +60,17 @@ class Tp2trp2as:
             self.prefix = 0xc0
 
     def sign(self, tx: btc.core.Transaction):
-        return tx
+        for i, e in enumerate(tx.vin):
+            m = btc.secp256k1.Fr(int.from_bytes(tx.digest_segwit_v1(i, btc.core.sighash_all, mast.r.script)))
+            r, s = btc.schnorr.sign(btc.secp256k1.Fr(4), m)
+            e.witness[0] = bytearray(r.x.x.to_bytes(32) + s.x.to_bytes(32)) + bytearray([btc.core.sighash_all])
+            r, s = btc.schnorr.sign(btc.secp256k1.Fr(3), m)
+            e.witness[1] = bytearray(r.x.x.to_bytes(32) + s.x.to_bytes(32)) + bytearray([btc.core.sighash_all])
 
     def txin(self, op: btc.core.OutPoint):
         return btc.core.TxIn(op, bytearray(), 0xffffffff, [
+            bytearray(65),
+            bytearray(65),
             mast.r.script,
             bytearray([self.prefix]) + self.pubkey.sec()[1:] + mast.l.hash,
         ])
@@ -93,8 +105,8 @@ print('main: spending by script path p2pk done')
 # Spending by script path: always success(op_1).
 mate.transfer(user_p2tr.script, 1 * btc.denomination.bitcoin)
 assert user_p2tr.balance() == btc.denomination.bitcoin
-user_p2as = btc.wallet.Wallet(Tp2trp2as(user_p2tr.signer.pubkey))
-print('main: spending by script path p2as')
-user_p2as.transfer_all(mate.script)
+user_p2ms = btc.wallet.Wallet(Tp2trp2ms(user_p2tr.signer.pubkey))
+print('main: spending by script path p2ms')
+user_p2ms.transfer_all(mate.script)
 assert user_p2tr.balance() == 0
-print('main: spending by script path p2as done')
+print('main: spending by script path p2ms done')
