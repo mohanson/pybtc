@@ -1,38 +1,16 @@
 import btc
-import typing
-Self = typing.Self
 
 # This example shows how to create a P2TR script with two unlock conditions: p2pk and p2as.
 
 
-class TapLeaf:
-    def __init__(self, script: bytearray):
-        data = bytearray()
-        data.append(0xc0)
-        data.extend(btc.core.compact_size_encode(len(script)))
-        data.extend(script)
-        self.hash = btc.core.hashtag('TapLeaf', data)
-        self.script = script
-
-
-class TapNode:
-    def __init__(self, l: Self | TapLeaf, r: Self | TapLeaf):
-        if l.hash < r.hash:
-            self.hash = btc.core.hashtag('TapBranch', l.hash + r.hash)
-        else:
-            self.hash = btc.core.hashtag('TapBranch', r.hash + l.hash)
-        self.l = l
-        self.r = r
-
-
 # Here created two scripts, one of which is a p2pk script, which requires that it can only be unlocked by private key 2,
 # and the other is an p2as(always success) script, which means that anyone can spend the utxo.
-mast = TapNode(
-    TapLeaf(btc.core.script([
+mast = btc.taproot.Node(
+    btc.taproot.Leaf(btc.core.script([
         btc.opcode.op_pushdata(btc.core.PriKey(2).pubkey().sec()[1:]),
         btc.opcode.op_checksig,
     ])),
-    TapLeaf(btc.core.script([
+    btc.taproot.Leaf(btc.core.script([
         btc.opcode.op_1
     ]))
 )
