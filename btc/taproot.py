@@ -1,4 +1,4 @@
-import btc
+import btc.core
 import typing
 
 

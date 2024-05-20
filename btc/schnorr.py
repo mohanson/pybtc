@@ -1,4 +1,4 @@
-import btc
+import btc.secp256k1
 import hashlib
 import random
 import typing

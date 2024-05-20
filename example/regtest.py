@@ -3,7 +3,7 @@ import btc
 pub1 = btc.core.PriKey(1).pubkey()
 pub2 = btc.core.PriKey(2).pubkey()
 
-btc.rpc.call('createwallet', ['main', True, True])
+btc.rpc.call('createwallet', ['main', True, True, None, None, None, True])
 for d in [
     f'pkh({pub1.sec().hex()})',
     f'pkh({pub2.sec().hex()})',

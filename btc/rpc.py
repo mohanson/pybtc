@@ -1,4 +1,4 @@
-import btc
+import btc.config
 import decimal
 import itertools
 import random

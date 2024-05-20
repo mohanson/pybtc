@@ -1,4 +1,9 @@
-import btc
+import btc.core
+import btc.denomination
+import btc.opcode
+import btc.rpc
+import btc.schnorr
+import btc.secp256k1
 import json
 import typing
 
