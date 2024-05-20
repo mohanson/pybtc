@@ -87,10 +87,10 @@ class Tp2pkh:
 
     def sign(self, tx: btc.core.Transaction):
         for i, e in enumerate(tx.vin):
-            r, s, _ = self.prikey.sign(tx.digest_legacy(i, btc.core.sighash_all, e.out_point.load().script_pubkey))
-            g = btc.core.der_encode(r, s) + bytearray([btc.core.sighash_all])
+            s = self.prikey.sign_ecdsa(tx.digest_legacy(i, btc.core.sighash_all, e.out_point.load().script_pubkey))
+            s.append(btc.core.sighash_all)
             e.script_sig = btc.core.script([
-                btc.opcode.op_pushdata(g),
+                btc.opcode.op_pushdata(s),
                 btc.opcode.op_pushdata(self.pubkey.sec())
             ])
 
@@ -129,9 +129,9 @@ class Tp2shp2ms:
             script_sig = []
             script_sig.append(btc.opcode.op_0)
             for prikey in self.prikey:
-                r, s, _ = prikey.sign(tx.digest_legacy(i, btc.core.sighash_all, self.redeem))
-                g = btc.core.der_encode(r, s) + bytearray([btc.core.sighash_all])
-                script_sig.append(btc.opcode.op_pushdata(g))
+                s = prikey.sign_ecdsa(tx.digest_legacy(i, btc.core.sighash_all, self.redeem))
+                s.append(btc.core.sighash_all)
+                script_sig.append(btc.opcode.op_pushdata(s))
             script_sig.append(btc.opcode.op_pushdata(self.redeem))
             e.script_sig = btc.core.script(script_sig)
 
@@ -179,9 +179,9 @@ class Tp2shp2wpkh:
         ]))])
         for i, e in enumerate(tx.vin):
             e.script_sig = script_sig
-            r, s, _ = self.prikey.sign(tx.digest_segwit_v0(i, btc.core.sighash_all, script_code))
-            g = btc.core.der_encode(r, s) + bytearray([btc.core.sighash_all])
-            e.witness[0] = g
+            s = self.prikey.sign_ecdsa(tx.digest_segwit_v0(i, btc.core.sighash_all, script_code))
+            s.append(btc.core.sighash_all)
+            e.witness[0] = s
             e.witness[1] = self.pubkey.sec()
 
     def txin(self, op: btc.core.OutPoint):
@@ -218,9 +218,9 @@ class Tp2wpkh:
                 btc.opcode.op_checksig,
             ]))])
         for i, e in enumerate(tx.vin):
-            r, s, _ = self.prikey.sign(tx.digest_segwit_v0(i, btc.core.sighash_all, script_code))
-            g = btc.core.der_encode(r, s) + bytearray([btc.core.sighash_all])
-            e.witness[0] = g
+            s = self.prikey.sign_ecdsa(tx.digest_segwit_v0(i, btc.core.sighash_all, script_code))
+            s.append(btc.core.sighash_all)
+            e.witness[0] = s
             e.witness[1] = self.pubkey.sec()
 
     def txin(self, op: btc.core.OutPoint):
@@ -253,10 +253,11 @@ class Tp2tr:
         adjust_prikey_byte = btc.core.hashtag('TapTweak', bytearray(self.pubkey.x.to_bytes(32)) + self.root)
         adjust_prikey = btc.secp256k1.Fr(int.from_bytes(adjust_prikey_byte))
         output_prikey = prikey + adjust_prikey
+        output_prikey = btc.core.PriKey(output_prikey.x)
         for i, e in enumerate(tx.vin):
-            m = btc.secp256k1.Fr(int.from_bytes(tx.digest_segwit_v1(i, btc.core.sighash_all, bytearray())))
-            r, s = btc.schnorr.sign(output_prikey, m)
-            e.witness[0] = bytearray(r.x.x.to_bytes(32) + s.x.to_bytes(32)) + bytearray([btc.core.sighash_all])
+            m = tx.digest_segwit_v1(i, btc.core.sighash_all, bytearray())
+            s = output_prikey.sign_schnorr(m) + bytearray([btc.core.sighash_all])
+            e.witness[0] = s
         return tx
 
     def txin(self, op: btc.core.OutPoint):

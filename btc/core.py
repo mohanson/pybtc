@@ -51,19 +51,24 @@ class PriKey:
         pubkey = btc.secp256k1.G * btc.secp256k1.Fr(self.n)
         return PubKey(pubkey.x.x, pubkey.y.x)
 
-    def sign(self, data: bytearray):
+    def sign_ecdsa(self, data: bytearray):
         assert len(data) == 32
         m = btc.secp256k1.Fr(int.from_bytes(data))
         for _ in itertools.repeat(0):
-            r, s, v = btc.ecdsa.sign(btc.secp256k1.Fr(self.n), m)
+            r, s, _ = btc.ecdsa.sign(btc.secp256k1.Fr(self.n), m)
             # We require that the S value inside ECDSA signatures is at most the curve order divided by 2 (essentially
             # restricting this value to its lower half range).
             # See: https://github.com/bitcoin/bips/blob/master/bip-0146.mediawiki
             if s.x * 2 >= btc.secp256k1.N:
                 s = -s
-                v = 1 - v
-            return r, s, v
+            return der_encode(r, s)
         raise Exception
+
+    def sign_schnorr(self, data: bytearray):
+        assert len(data) == 32
+        m = btc.secp256k1.Fr(int.from_bytes(data))
+        r, s = btc.schnorr.sign(btc.secp256k1.Fr(self.n), m)
+        return bytearray(r.x.x.to_bytes(32) + s.x.to_bytes(32))
 
     def wif(self):
         # See https://en.bitcoin.it/wiki/Wallet_import_format

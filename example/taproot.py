@@ -35,9 +35,9 @@ class Tp2trp2pk:
 
     def sign(self, tx: btc.core.Transaction):
         for i, e in enumerate(tx.vin):
-            m = btc.secp256k1.Fr(int.from_bytes(tx.digest_segwit_v1(i, btc.core.sighash_all, mast.l.script)))
-            r, s = btc.schnorr.sign(btc.secp256k1.Fr(2), m)
-            e.witness[0] = bytearray(r.x.x.to_bytes(32) + s.x.to_bytes(32)) + bytearray([btc.core.sighash_all])
+            m = tx.digest_segwit_v1(i, btc.core.sighash_all, mast.l.script)
+            s = btc.core.PriKey(2).sign_schnorr(m) + bytearray([btc.core.sighash_all])
+            e.witness[0] = s
 
     def txin(self, op: btc.core.OutPoint):
         return btc.core.TxIn(op, bytearray(), 0xffffffff, [
@@ -61,11 +61,9 @@ class Tp2trp2ms:
 
     def sign(self, tx: btc.core.Transaction):
         for i, e in enumerate(tx.vin):
-            m = btc.secp256k1.Fr(int.from_bytes(tx.digest_segwit_v1(i, btc.core.sighash_all, mast.r.script)))
-            r, s = btc.schnorr.sign(btc.secp256k1.Fr(4), m)
-            e.witness[0] = bytearray(r.x.x.to_bytes(32) + s.x.to_bytes(32)) + bytearray([btc.core.sighash_all])
-            r, s = btc.schnorr.sign(btc.secp256k1.Fr(3), m)
-            e.witness[1] = bytearray(r.x.x.to_bytes(32) + s.x.to_bytes(32)) + bytearray([btc.core.sighash_all])
+            m = tx.digest_segwit_v1(i, btc.core.sighash_all, mast.r.script)
+            e.witness[0] = btc.core.PriKey(4).sign_schnorr(m) + bytearray([btc.core.sighash_all])
+            e.witness[1] = btc.core.PriKey(3).sign_schnorr(m) + bytearray([btc.core.sighash_all])
 
     def txin(self, op: btc.core.OutPoint):
         return btc.core.TxIn(op, bytearray(), 0xffffffff, [
