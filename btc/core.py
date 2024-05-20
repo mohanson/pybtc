@@ -752,3 +752,23 @@ def witness_decode_reader(r: typing.BinaryIO) -> typing.List[bytearray]:
     for _ in range(compact_size_decode_reader(r)):
         wits.append(bytearray(r.read(compact_size_decode_reader(r))))
     return wits
+
+
+class TapLeaf:
+    def __init__(self, script: bytearray):
+        data = bytearray()
+        data.append(0xc0)
+        data.extend(compact_size_encode(len(script)))
+        data.extend(script)
+        self.hash = hashtag('TapLeaf', data)
+        self.script = script
+
+
+class TapNode:
+    def __init__(self, l: typing.Self | TapLeaf, r: typing.Self | TapLeaf):
+        if l.hash < r.hash:
+            self.hash = hashtag('TapBranch', l.hash + r.hash)
+        else:
+            self.hash = hashtag('TapBranch', r.hash + l.hash)
+        self.l = l
+        self.r = r

@@ -5,12 +5,12 @@ import btc
 
 # Here created two scripts, one of which is a p2pk script, which requires that it can only be unlocked by private key 2,
 # and the other is an 2-of-2 multisig script.
-mast = btc.taproot.Node(
-    btc.taproot.Leaf(btc.core.script([
+mast = btc.core.TapNode(
+    btc.core.TapLeaf(btc.core.script([
         btc.opcode.op_pushdata(btc.core.PriKey(2).pubkey().sec()[1:]),
         btc.opcode.op_checksig,
     ])),
-    btc.taproot.Leaf(btc.core.script([
+    btc.core.TapLeaf(btc.core.script([
         btc.opcode.op_pushdata(btc.core.PriKey(3).pubkey().sec()[1:]),
         btc.opcode.op_checksig,
         btc.opcode.op_pushdata(btc.core.PriKey(4).pubkey().sec()[1:]),
