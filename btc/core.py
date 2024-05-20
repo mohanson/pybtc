@@ -9,6 +9,7 @@ import btc.rpc
 import btc.schnorr
 import btc.secp256k1
 import hashlib
+import itertools
 import math
 import io
 import json
@@ -53,11 +54,8 @@ class PriKey:
     def sign(self, data: bytearray):
         assert len(data) == 32
         m = btc.secp256k1.Fr(int.from_bytes(data))
-        r, s, v = btc.ecdsa.sign(btc.secp256k1.Fr(self.n), m)
-        for _ in range(8):
+        for _ in itertools.repeat(0):
             r, s, v = btc.ecdsa.sign(btc.secp256k1.Fr(self.n), m)
-            if v > 1:
-                continue
             # We require that the S value inside ECDSA signatures is at most the curve order divided by 2 (essentially
             # restricting this value to its lower half range).
             # See: https://github.com/bitcoin/bips/blob/master/bip-0146.mediawiki
