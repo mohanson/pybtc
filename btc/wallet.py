@@ -5,6 +5,7 @@ import btc.rpc
 import btc.schnorr
 import btc.secp256k1
 import json
+import requests
 import typing
 
 
@@ -51,7 +52,9 @@ class Utxo:
         }
 
 
-class Searcher:
+class SearcherCore:
+    # Searcher provides the functionality to list unspent transaction outputs (utxo). To use this implementation, make
+    # sure the address you want to query has been imported into your bitcoin core wallet.
     def __init__(self):
         pass
 
@@ -65,6 +68,47 @@ class Searcher:
             utxo = Utxo(out_point, btc.core.TxOut(amount, script_pubkey))
             r.append(utxo)
         return r
+
+
+class SearcherMempoolSpace:
+    # Searcher provides the functionality to list unspent transaction outputs (utxo). Here we use the public API
+    # provided by mempool for querying utxo.
+    def __init__(self, net: str):
+        assert net in ['mainnet', 'testnet']
+        self.net = net
+
+    def get_url(self, addr: str) -> str:
+        if self.net == 'mainnet':
+            return f'https://mempool.space/api/address/{addr}/utxo'
+        if self.net == 'testnet':
+            return f'https://mempool.space/testnet/api/address/{addr}/utxo'
+        raise Exception
+
+    def unspent(self, addr: str) -> typing.List[Utxo]:
+        r = []
+        for e in requests.get(self.get_url(addr)).json():
+            out_point = btc.core.OutPoint(bytearray.fromhex(e['txid'])[::-1], e['vout'])
+            # Mempool's api does not provide script_pubkey, so we have to infer it from the address.
+            script_pubkey = btc.core.script_pubkey(addr)
+            amount = e['value']
+            utxo = Utxo(out_point, btc.core.TxOut(amount, script_pubkey))
+            r.append(utxo)
+        return r
+
+
+class Searcher:
+    # Searcher provides the functionality to list unspent transaction outputs (utxo).
+    def __init__(self):
+        pass
+
+    def unspent(self, addr: str) -> typing.List[Utxo]:
+        if btc.config.current == btc.config.develop:
+            return SearcherCore().unspent(addr)
+        if btc.config.current == btc.config.mainnet:
+            return SearcherMempoolSpace('mainnet').unspent(addr)
+        if btc.config.current == btc.config.testnet:
+            return SearcherMempoolSpace('testnet').unspent(addr)
+        raise Exception
 
 
 class Tp2pkh:

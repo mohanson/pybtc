@@ -10,7 +10,6 @@ class ObjectDict(dict):
 
 
 develop = ObjectDict({
-    'name': 'develop',
     'rpc': ObjectDict({
         'addr': 'http://127.0.0.1:18443',
         'username': 'user',
@@ -25,11 +24,10 @@ develop = ObjectDict({
 })
 
 mainnet = ObjectDict({
-    'name': 'mainnet',
     'rpc': ObjectDict({
-        'addr': 'http://127.0.0.1:8332',
-        'username': 'user',
-        'password': 'pass',
+        'addr': 'https://bitcoin.drpc.org/',
+        'username': '',
+        'password': '',
     }),
     'prefix': ObjectDict({
         'p2pkh': 0x00,
@@ -40,11 +38,10 @@ mainnet = ObjectDict({
 })
 
 testnet = ObjectDict({
-    'name': 'testnet',
     'rpc': ObjectDict({
-        'addr': 'http://127.0.0.1:18332',
-        'username': 'user',
-        'password': 'pass',
+        'addr': 'https://bitcoin-testnet.drpc.org/',
+        'username': '',
+        'password': '',
     }),
     'prefix': ObjectDict({
         'p2pkh': 0x6f,

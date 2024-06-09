@@ -40,7 +40,7 @@ $ python example/taproot.py
 
 **example/transfer.py**
 
-Transfer Bitcoin to another account. Pybtc includes a default Bitcoin Core UTXO searcher. You can refer to the Test section for configuring the Bitcoin Core regtest node. Pybtc supports four common types of Bitcoin transactions: P2PKH, P2SH-P2WPKH, P2WPKH, and P2TR. For more complex account types, such as P2SH-P2MS, please refer to [test/test_wallet.py](test/test_wallet.py).
+Transfer Bitcoin to another account. Pybtc supports four common types of Bitcoin transactions: P2PKH, P2SH-P2WPKH, P2WPKH, and P2TR. For more complex account types, such as P2SH-P2MS, please refer to [test/test_wallet.py](test/test_wallet.py).
 
 ```sh
 $ python example/transfer.py --net develop --prikey 1 --script-type p2pkh --to mg8Jz5776UdyiYcBb9Z873NTozEiADRW5H --value 0.1
@@ -48,7 +48,7 @@ $ python example/transfer.py --net develop --prikey 1 --script-type p2pkh --to m
 # 0x039d1b0fe969d33341a7db9ddd236f632d6851292200603abc5a6c7738bf3079
 ```
 
-You can implement the UTXO searcher yourself to avoid relying on the Bitcoin Core wallet. Reference: [btc.wallet.Searcher](btc/wallet.py)
+Before using this script, you first need to execute the code in the Test section. This is because pybtc requires the bitcoin core wallet to provide an account's utxo set.
 
 ## Test
 
