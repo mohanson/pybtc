@@ -28,6 +28,7 @@ class Tp2trp2pk:
         self.script = btc.core.script_pubkey_p2tr(self.addr)
         output_pubkey_byte = bytearray([0x02]) + btc.bech32.decode(btc.config.current.prefix.bech32, 1, self.addr)
         output_pubkey = btc.core.PubKey.sec_decode(output_pubkey_byte)
+        # Control byte with leaf version and parity bit.
         if output_pubkey.y & 1:
             self.prefix = 0xc1
         else:
@@ -43,7 +44,7 @@ class Tp2trp2pk:
         return btc.core.TxIn(op, bytearray(), 0xffffffff, [
             bytearray(65),
             mast.l.script,
-            bytearray([self.prefix]) + self.pubkey.x.to_bytes(32) + mast.r.hash,
+            bytearray([self.prefix]) + self.pubkey.sec()[1:] + mast.r.hash,
         ])
 
 
@@ -54,6 +55,7 @@ class Tp2trp2ms:
         self.script = btc.core.script_pubkey_p2tr(self.addr)
         output_pubkey_byte = bytearray([0x02]) + btc.bech32.decode(btc.config.current.prefix.bech32, 1, self.addr)
         output_pubkey = btc.core.PubKey.sec_decode(output_pubkey_byte)
+        # Control byte with leaf version and parity bit.
         if output_pubkey.y & 1:
             self.prefix = 0xc1
         else:
@@ -100,7 +102,7 @@ user_p2pk.transfer_all(mate.script)
 assert user_p2tr.balance() == 0
 print('main: spending by script path p2pk done')
 
-# Spending by script path: always success(op_1).
+# Spending by script path: pay to 2-of-2 multisig script.
 mate.transfer(user_p2tr.script, 1 * btc.denomination.bitcoin)
 assert user_p2tr.balance() == btc.denomination.bitcoin
 user_p2ms = btc.wallet.Wallet(Tp2trp2ms(user_p2tr.signer.pubkey))
