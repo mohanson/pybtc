@@ -90,6 +90,8 @@ class PriKey:
 
 class PubKey:
     def __init__(self, x: int, y: int):
+        # The public key must be on the curve.
+        _ = btc.secp256k1.Pt(btc.secp256k1.Fq(x), btc.secp256k1.Fq(y))
         self.x = x
         self.y = y
 
