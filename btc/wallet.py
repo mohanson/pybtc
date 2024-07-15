@@ -11,10 +11,10 @@ import typing
 
 class Analyzer:
     # Analyzer is a simple transaction analyzer to reject transactions that are obviously wrong.
-    def __init__(self, tx: btc.core.Transaction):
+    def __init__(self, tx: btc.core.Transaction) -> None:
         self.tx = tx
 
-    def analyze_mining_fee(self):
+    def analyze_mining_fee(self) -> None:
         # Make sure the transaction fee is less than 50 satoshi per byte. An excessive fee, also called an absurd fee,
         # is any fee rate that's significantly higher than the amount that fee rate estimators currently expect is
         # necessary to get a transaction confirmed in the next block.
@@ -27,25 +27,25 @@ class Analyzer:
             output_value += e.value
         assert sender_value - output_value <= self.tx.vbytes() * 50
 
-    def analyze(self):
+    def analyze(self) -> None:
         self.analyze_mining_fee()
 
 
 class Utxo:
-    def __init__(self, out_point: btc.core.OutPoint, out: btc.core.TxOut):
+    def __init__(self, out_point: btc.core.OutPoint, out: btc.core.TxOut) -> None:
         self.out_point = out_point
         self.out = out
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return json.dumps(self.json())
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return all([
             self.out_point == other.out_point,
             self.out == other.out,
         ])
 
-    def json(self):
+    def json(self) -> typing.Dict:
         return {
             'out_point': self.out_point.json(),
             'out': self.out.json(),
@@ -55,7 +55,7 @@ class Utxo:
 class SearcherCore:
     # Searcher provides the functionality to list unspent transaction outputs (utxo). To use this implementation, make
     # sure the address you want to query has been imported into your bitcoin core wallet.
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     def unspent(self, addr: str) -> typing.List[Utxo]:
@@ -73,7 +73,7 @@ class SearcherCore:
 class SearcherMempoolSpace:
     # Searcher provides the functionality to list unspent transaction outputs (utxo). Here we use the public API
     # provided by mempool for querying utxo.
-    def __init__(self, net: str):
+    def __init__(self, net: str) -> None:
         assert net in ['mainnet', 'testnet']
         self.net = net
 
@@ -98,7 +98,7 @@ class SearcherMempoolSpace:
 
 class Searcher:
     # Searcher provides the functionality to list unspent transaction outputs (utxo).
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     def unspent(self, addr: str) -> typing.List[Utxo]:
@@ -112,16 +112,16 @@ class Searcher:
 
 
 class Tp2pkh:
-    def __init__(self, prikey: int):
+    def __init__(self, prikey: int) -> None:
         self.prikey = btc.core.PriKey(prikey)
         self.pubkey = self.prikey.pubkey()
         self.addr = btc.core.address_p2pkh(self.pubkey)
         self.script = btc.core.script_pubkey_p2pkh(self.addr)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return json.dumps(self.json())
 
-    def json(self):
+    def json(self) -> typing.Dict:
         return {
             'prikey': self.prikey.json(),
             'pubkey': self.pubkey.json(),
@@ -129,7 +129,7 @@ class Tp2pkh:
             'script': self.script.hex(),
         }
 
-    def sign(self, tx: btc.core.Transaction):
+    def sign(self, tx: btc.core.Transaction) -> None:
         for i, e in enumerate(tx.vin):
             s = self.prikey.sign_ecdsa(tx.digest_legacy(i, btc.core.sighash_all, e.out_point.load().script_pubkey))
             s.append(btc.core.sighash_all)
@@ -138,13 +138,13 @@ class Tp2pkh:
                 btc.opcode.op_pushdata(self.pubkey.sec())
             ])
 
-    def txin(self, op: btc.core.OutPoint):
+    def txin(self, op: btc.core.OutPoint) -> btc.core.TxIn:
         return btc.core.TxIn(op, bytearray(107), 0xffffffff, [])
 
 
 class Tp2shp2ms:
     # Multi-signature: See https://en.bitcoin.it/wiki/Multi-signature.
-    def __init__(self, pubkey: typing.List[btc.core.PubKey], prikey: typing.List[int]):
+    def __init__(self, pubkey: typing.List[btc.core.PubKey], prikey: typing.List[int]) -> None:
         self.prikey = [btc.core.PriKey(e) for e in prikey]
         self.pubkey = pubkey
         script_asts = []
@@ -157,10 +157,10 @@ class Tp2shp2ms:
         self.addr = btc.core.address_p2sh(self.redeem)
         self.script = btc.core.script_pubkey_p2sh(self.addr)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return json.dumps(self.json())
 
-    def json(self):
+    def json(self) -> typing.Dict:
         return {
             'prikey': [e.json() for e in self.prikey],
             'pubkey': [e.json() for e in self.pubkey],
@@ -168,7 +168,7 @@ class Tp2shp2ms:
             'script': self.script.hex(),
         }
 
-    def sign(self, tx: btc.core.Transaction):
+    def sign(self, tx: btc.core.Transaction) -> None:
         for i, e in enumerate(tx.vin):
             script_sig = []
             script_sig.append(btc.opcode.op_0)
@@ -179,7 +179,7 @@ class Tp2shp2ms:
             script_sig.append(btc.opcode.op_pushdata(self.redeem))
             e.script_sig = btc.core.script(script_sig)
 
-    def txin(self, op: btc.core.OutPoint):
+    def txin(self, op: btc.core.OutPoint) -> btc.core.TxIn:
         script_sig = []
         script_sig.append(btc.opcode.op_0)
         for _ in range(len(self.prikey)):
@@ -189,16 +189,16 @@ class Tp2shp2ms:
 
 
 class Tp2shp2wpkh:
-    def __init__(self, prikey: int):
+    def __init__(self, prikey: int) -> None:
         self.prikey = btc.core.PriKey(prikey)
         self.pubkey = self.prikey.pubkey()
         self.addr = btc.core.address_p2sh_p2wpkh(self.pubkey)
         self.script = btc.core.script_pubkey_p2sh(self.addr)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return json.dumps(self.json())
 
-    def json(self):
+    def json(self) -> typing.Dict:
         return {
             'prikey': self.prikey.json(),
             'pubkey': self.pubkey.json(),
@@ -206,7 +206,7 @@ class Tp2shp2wpkh:
             'script': self.script.hex(),
         }
 
-    def sign(self, tx: btc.core.Transaction):
+    def sign(self, tx: btc.core.Transaction) -> None:
         # See: https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#p2wpkh-nested-in-bip16-p2sh
         pubkey_hash = btc.core.hash160(self.pubkey.sec())
         script_code = btc.core.script([
@@ -228,21 +228,21 @@ class Tp2shp2wpkh:
             e.witness[0] = s
             e.witness[1] = self.pubkey.sec()
 
-    def txin(self, op: btc.core.OutPoint):
+    def txin(self, op: btc.core.OutPoint) -> btc.core.TxIn:
         return btc.core.TxIn(op, bytearray(23), 0xffffffff, [bytearray(72), bytearray(33)])
 
 
 class Tp2wpkh:
-    def __init__(self, prikey: int):
+    def __init__(self, prikey: int) -> None:
         self.prikey = btc.core.PriKey(prikey)
         self.pubkey = self.prikey.pubkey()
         self.addr = btc.core.address_p2wpkh(self.pubkey)
         self.script = btc.core.script_pubkey_p2wpkh(self.addr)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return json.dumps(self.json())
 
-    def json(self):
+    def json(self) -> typing.Dict:
         return {
             'prikey': self.prikey.json(),
             'pubkey': self.pubkey.json(),
@@ -250,7 +250,7 @@ class Tp2wpkh:
             'script': self.script.hex(),
         }
 
-    def sign(self, tx: btc.core.Transaction):
+    def sign(self, tx: btc.core.Transaction) -> None:
         # See: https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#p2wpkh
         pubkey_hash = btc.core.hash160(self.pubkey.sec())
         script_code = btc.core.script([
@@ -267,22 +267,22 @@ class Tp2wpkh:
             e.witness[0] = s
             e.witness[1] = self.pubkey.sec()
 
-    def txin(self, op: btc.core.OutPoint):
+    def txin(self, op: btc.core.OutPoint) -> btc.core.TxIn:
         return btc.core.TxIn(op, bytearray(), 0xffffffff, [bytearray(72), bytearray(33)])
 
 
 class Tp2tr:
-    def __init__(self, prikey: int, root: bytearray):
+    def __init__(self, prikey: int, root: bytearray) -> None:
         self.prikey = btc.core.PriKey(prikey)
         self.pubkey = self.prikey.pubkey()
         self.addr = btc.core.address_p2tr(self.pubkey, root)
         self.root = root
         self.script = btc.core.script_pubkey_p2tr(self.addr)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return json.dumps(self.json())
 
-    def json(self):
+    def json(self) -> typing.Dict:
         return {
             'prikey': self.prikey.json(),
             'pubkey': self.pubkey.json(),
@@ -291,7 +291,7 @@ class Tp2tr:
             'script': self.script.hex(),
         }
 
-    def sign(self, tx: btc.core.Transaction):
+    def sign(self, tx: btc.core.Transaction) -> None:
         # See: https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki
         prikey = btc.secp256k1.Fr(self.prikey.n)
         adjust_prikey_byte = btc.core.hashtag('TapTweak', bytearray(self.pubkey.x.to_bytes(32)) + self.root)
@@ -304,7 +304,7 @@ class Tp2tr:
             e.witness[0] = s
         return tx
 
-    def txin(self, op: btc.core.OutPoint):
+    def txin(self, op: btc.core.OutPoint) -> btc.core.TxIn:
         return btc.core.TxIn(op, bytearray(), 0xffffffff, [bytearray(65)])
 
 
@@ -312,22 +312,22 @@ T = Tp2pkh | Tp2shp2ms | Tp2shp2wpkh | Tp2wpkh | Tp2tr
 
 
 class Wallet:
-    def __init__(self, signer: T):
+    def __init__(self, signer: T) -> None:
         self.signer = signer
         self.addr = self.signer.addr
         self.script = self.signer.script
         self.search = Searcher()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return json.dumps(self.json())
 
-    def balance(self):
+    def balance(self) -> int:
         return sum([e.out.value for e in self.unspent()])
 
-    def json(self):
+    def json(self) -> typing.Dict:
         return self.signer.json()
 
-    def transfer(self, script: bytearray, value: int):
+    def transfer(self, script: bytearray, value: int) -> bytearray:
         sender_value = 0
         accept_value = value
         accept_script = script
@@ -354,7 +354,7 @@ class Wallet:
         txid = bytearray.fromhex(btc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
         return txid
 
-    def transfer_all(self, script: bytearray):
+    def transfer_all(self, script: bytearray) -> bytearray:
         sender_value = 0
         accept_value = 0
         accept_script = script

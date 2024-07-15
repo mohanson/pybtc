@@ -14,6 +14,7 @@ import math
 import io
 import json
 import typing
+Self = typing.Self
 
 sighash_default = 0x00
 sighash_all = 0x01
@@ -35,23 +36,25 @@ def hashtag(name: str, data: bytearray) -> bytearray:
 
 
 class PriKey:
-    def __init__(self, n: int):
+    def __init__(self, n: int) -> None:
         self.n = n
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return json.dumps(self.json())
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return self.n == other.n
 
-    def json(self):
-        return f'0x{self.n:064x}'
+    def json(self) -> typing.Dict:
+        return {
+            'n': f'0x{self.n:064x}',
+        }
 
     def pubkey(self):
         pubkey = btc.secp256k1.G * btc.secp256k1.Fr(self.n)
         return PubKey(pubkey.x.x, pubkey.y.x)
 
-    def sign_ecdsa(self, data: bytearray):
+    def sign_ecdsa(self, data: bytearray) -> bytearray:
         assert len(data) == 32
         m = btc.secp256k1.Fr(int.from_bytes(data))
         for _ in itertools.repeat(0):
@@ -64,13 +67,13 @@ class PriKey:
             return der_encode(r, s)
         raise Exception
 
-    def sign_schnorr(self, data: bytearray):
+    def sign_schnorr(self, data: bytearray) -> bytearray:
         assert len(data) == 32
         m = btc.secp256k1.Fr(int.from_bytes(data))
         r, s = btc.schnorr.sign(btc.secp256k1.Fr(self.n), m)
         return bytearray(r.x.x.to_bytes(32) + s.x.to_bytes(32))
 
-    def wif(self):
+    def wif(self) -> str:
         # See https://en.bitcoin.it/wiki/Wallet_import_format
         data = bytearray()
         data.append(btc.config.current.prefix.wif)
@@ -81,7 +84,7 @@ class PriKey:
         return btc.base58.encode(data)
 
     @staticmethod
-    def wif_decode(data: str):
+    def wif_decode(data: str) -> Self:
         data = btc.base58.decode(data)
         assert data[0] == btc.config.current.prefix.wif
         assert hash256(data[:-4])[:4] == data[-4:]
@@ -89,28 +92,28 @@ class PriKey:
 
 
 class PubKey:
-    def __init__(self, x: int, y: int):
+    def __init__(self, x: int, y: int) -> None:
         # The public key must be on the curve.
         _ = btc.secp256k1.Pt(btc.secp256k1.Fq(x), btc.secp256k1.Fq(y))
         self.x = x
         self.y = y
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return json.dumps(self.json())
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return all([
             self.x == other.x,
             self.y == other.y,
         ])
 
-    def json(self):
+    def json(self) -> typing.Dict:
         return {
             'x': f'0x{self.x:064x}',
             'y': f'0x{self.y:064x}'
         }
 
-    def sec(self):
+    def sec(self) -> bytearray:
         r = bytearray()
         if self.y & 1 == 0:
             r.append(0x02)
@@ -120,7 +123,7 @@ class PubKey:
         return r
 
     @staticmethod
-    def sec_decode(data: bytearray):
+    def sec_decode(data: bytearray) -> Self:
         p = data[0]
         assert p in [0x02, 0x03, 0x04]
         x = int.from_bytes(data[1:33])
@@ -229,7 +232,7 @@ def compact_size_decode_reader(reader: typing.BinaryIO) -> int:
 
 
 class HashType:
-    def __init__(self, n: int):
+    def __init__(self, n: int) -> None:
         assert n in [
             sighash_default,
             sighash_all,
@@ -246,26 +249,26 @@ class HashType:
 
 
 class OutPoint:
-    def __init__(self, txid: bytearray, vout: int):
+    def __init__(self, txid: bytearray, vout: int) -> None:
         assert len(txid) == 32
         assert vout >= 0
         assert vout <= 0xffffffff
         self.txid = txid
         self.vout = vout
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return json.dumps(self.json())
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return all([
             self.txid == other.txid,
             self.vout == other.vout,
         ])
 
-    def copy(self):
+    def copy(self) -> Self:
         return OutPoint(self.txid.copy(), self.vout)
 
-    def json(self):
+    def json(self) -> typing.Dict:
         return {
             'txid': f'0x{self.txid.hex()}',
             'vout': self.vout,
@@ -280,7 +283,13 @@ class OutPoint:
 
 
 class TxIn:
-    def __init__(self, out_point: OutPoint, script_sig: bytearray, sequence: int, witness: typing.List[bytearray]):
+    def __init__(
+        self,
+        out_point: OutPoint,
+        script_sig: bytearray,
+        sequence: int,
+        witness: typing.List[bytearray]
+    ) -> None:
         assert sequence >= 0
         assert sequence <= 0xffffffff
         self.out_point = out_point
@@ -288,10 +297,10 @@ class TxIn:
         self.sequence = sequence
         self.witness = witness
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return json.dumps(self.json())
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return all([
             self.out_point == other.out_point,
             self.script_sig == other.script_sig,
@@ -299,10 +308,10 @@ class TxIn:
             self.witness == other.witness,
         ])
 
-    def copy(self):
+    def copy(self) -> Self:
         return TxIn(self.out_point.copy(), self.script_sig.copy(), self.sequence, [e.copy() for e in self.witness])
 
-    def json(self):
+    def json(self) -> typing.Dict:
         return {
             'out_point': self.out_point.json(),
             'script_sig': f'0x{self.script_sig.hex()}',
@@ -312,25 +321,25 @@ class TxIn:
 
 
 class TxOut:
-    def __init__(self, value: int, script_pubkey: bytearray):
+    def __init__(self, value: int, script_pubkey: bytearray) -> None:
         assert value >= 0
         assert value <= 0xffffffffffffffff
         self.value = value
         self.script_pubkey = script_pubkey
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return json.dumps(self.json())
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return all([
             self.value == other.value,
             self.script_pubkey == other.script_pubkey,
         ])
 
-    def copy(self):
+    def copy(self) -> Self:
         return TxOut(self.value, self.script_pubkey.copy())
 
-    def json(self):
+    def json(self) -> typing.Dict:
         return {
             'value': self.value,
             'script_pubkey': f'0x{self.script_pubkey.hex()}',
@@ -340,16 +349,16 @@ class TxOut:
 class Transaction:
     # Referring to the design of Bitcoin core.
     # See: https://github.com/bitcoin/bitcoin/blob/master/src/primitives/transaction.h
-    def __init__(self, version: int, vin: typing.List[TxIn], vout: typing.List[TxOut], locktime: int):
+    def __init__(self, version: int, vin: typing.List[TxIn], vout: typing.List[TxOut], locktime: int) -> None:
         self.version = version
         self.vin = vin
         self.vout = vout
         self.locktime = locktime
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return json.dumps(self.json())
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return all([
             self.version == other.version,
             self.vin == other.vin,
@@ -357,10 +366,10 @@ class Transaction:
             self.locktime == other.locktime,
         ])
 
-    def copy(self):
+    def copy(self) -> Self:
         return Transaction(self.version, [i.copy() for i in self.vin], [o.copy() for o in self.vout], self.locktime)
 
-    def digest_legacy(self, i: int, hash_type: int, script_code: bytearray):
+    def digest_legacy(self, i: int, hash_type: int, script_code: bytearray) -> bytearray:
         # The legacy signing algorithm is used to create signatures that will unlock non-segwit locking scripts.
         # See: https://learnmeabitcoin.com/technical/keys/signature/
         ht = HashType(hash_type)
@@ -384,7 +393,7 @@ class Transaction:
         data.extend(bytearray([hash_type, 0x00, 0x00, 0x00]))
         return hash256(data)
 
-    def digest_segwit_v0(self, i: int, hash_type: int, script_code: bytearray):
+    def digest_segwit_v0(self, i: int, hash_type: int, script_code: bytearray) -> bytearray:
         # A new transaction digest algorithm for signature verification in version 0 witness program, in order to
         # minimize redundant data hashing in verification, and to cover the input value by the signature.
         # See: https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki
@@ -440,7 +449,7 @@ class Transaction:
         data.extend(bytearray([hash_type, 0x00, 0x00, 0x00]))
         return hash256(data)
 
-    def digest_segwit_v1(self, i: int, hash_type: int, script_code: bytearray):
+    def digest_segwit_v1(self, i: int, hash_type: int, script_code: bytearray) -> bytearray:
         # See: https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki#common-signature-message
         ht = HashType(hash_type)
         data = bytearray()
@@ -525,7 +534,7 @@ class Transaction:
         assert len(data) == size
         return hashtag('TapSighash', data)
 
-    def json(self):
+    def json(self) -> typing.Dict:
         return {
             'version': self.version,
             'vin': [e.json() for e in self.vin],
@@ -533,7 +542,7 @@ class Transaction:
             'locktime': self.locktime,
         }
 
-    def serialize_legacy(self):
+    def serialize_legacy(self) -> bytearray:
         data = bytearray()
         data.extend(self.version.to_bytes(4, 'little'))
         data.extend(compact_size_encode(len(self.vin)))
@@ -551,7 +560,7 @@ class Transaction:
         data.extend(self.locktime.to_bytes(4, 'little'))
         return data
 
-    def serialize_segwit(self):
+    def serialize_segwit(self) -> bytearray:
         data = bytearray()
         data.extend(self.version.to_bytes(4, 'little'))
         data.append(0x00)
@@ -573,7 +582,7 @@ class Transaction:
         data.extend(self.locktime.to_bytes(4, 'little'))
         return data
 
-    def serialize(self):
+    def serialize(self) -> bytearray:
         # If any inputs have nonempty witnesses, the entire transaction is serialized in the BIP141 Segwit format which
         # includes a list of witnesses.
         # See: https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki
@@ -583,7 +592,7 @@ class Transaction:
             return self.serialize_legacy()
 
     @staticmethod
-    def serialize_decode_legacy(data: bytearray):
+    def serialize_decode_legacy(data: bytearray) -> Self:
         reader = io.BytesIO(data)
         tx = Transaction(0, [], [], 0)
         tx.version = int.from_bytes(reader.read(4), 'little')
@@ -601,7 +610,7 @@ class Transaction:
         return tx
 
     @staticmethod
-    def serialize_decode_segwit(data: bytearray):
+    def serialize_decode_segwit(data: bytearray) -> Self:
         reader = io.BytesIO(data)
         tx = Transaction(0, [], [], 0)
         tx.version = int.from_bytes(reader.read(4), 'little')
@@ -623,19 +632,19 @@ class Transaction:
         return tx
 
     @staticmethod
-    def serialize_decode(data: bytearray):
+    def serialize_decode(data: bytearray) -> Self:
         if data[4] == 0x00:
             return Transaction.serialize_decode_segwit(data)
         else:
             return Transaction.serialize_decode_legacy(data)
 
-    def txid(self):
+    def txid(self) -> bytearray:
         return hash256(self.serialize_legacy())
 
-    def vbytes(self):
+    def vbytes(self) -> int:
         return math.ceil(self.weight() / 4.0)
 
-    def weight(self):
+    def weight(self) -> int:
         size_legacy = len(self.serialize_legacy())
         size_segwit = len(self.serialize_segwit()) - size_legacy
         return size_legacy * 4 + size_segwit
@@ -760,7 +769,7 @@ def witness_decode_reader(r: typing.BinaryIO) -> typing.List[bytearray]:
 
 
 class TapLeaf:
-    def __init__(self, script: bytearray):
+    def __init__(self, script: bytearray) -> None:
         data = bytearray()
         data.append(0xc0)
         data.extend(compact_size_encode(len(script)))
@@ -770,7 +779,7 @@ class TapLeaf:
 
 
 class TapNode:
-    def __init__(self, l: typing.Self | TapLeaf, r: typing.Self | TapLeaf):
+    def __init__(self, l: typing.Self | TapLeaf, r: typing.Self | TapLeaf) -> None:
         if l.hash < r.hash:
             self.hash = hashtag('TapBranch', l.hash + r.hash)
         else:

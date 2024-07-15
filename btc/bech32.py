@@ -74,7 +74,7 @@ def bech32_re_arrange_5(data: bytearray) -> bytearray:
     return ret
 
 
-def bech32_create_checksum(hrp: str, ver: int, data: bytearray):
+def bech32_create_checksum(hrp: str, ver: int, data: bytearray) -> bytearray:
     hrpdata = bech32_hrpconv(hrp) + data
     polymod = bech32_polymod(hrpdata + bytearray(6))
     if ver == 0:
@@ -84,7 +84,7 @@ def bech32_create_checksum(hrp: str, ver: int, data: bytearray):
     return bytearray([(polymod >> 5 * (5 - i)) & 31 for i in range(6)])
 
 
-def bech32_verify_checksum(hrp: str, ver: int, data: bytearray):
+def bech32_verify_checksum(hrp: str, ver: int, data: bytearray) -> bool:
     if ver == 0:
         return bech32_polymod(bech32_hrpconv(hrp) + bytearray(data)) == CONST_0
     if ver >= 1:
@@ -109,7 +109,7 @@ def bech32_decode(ver: int, bech: str) -> typing.Tuple[str, bytearray]:
     return hrp, data[:-6]
 
 
-def bech32_encode(hrp: str, ver: int, data: bytearray):
+def bech32_encode(hrp: str, ver: int, data: bytearray) -> str:
     datasum = data + bech32_create_checksum(hrp, ver, data)
     return hrp + '1' + ''.join([CHARSET[d] for d in datasum])
 
