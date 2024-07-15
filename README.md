@@ -30,6 +30,19 @@ $ python example/addr.py --net mainnet --prikey 1
 # p2tr        bc1pmfr3p9j00pfxjh0zmgp99y8zftmd3s5pmedqhyptwy6lm87hf5sspknck9
 ```
 
+**example/message.py**
+
+Sign a message with the private key and verify it.
+
+```sh
+$ python example/message.py --prikey 1 --msg pybtc
+# ICvzXjwjJVMilSGyMqwlqMTuGF6UMwddFJzVmm0Di5qNnqkBRKP8Pldm3YbOskg3ewV1tszVLy8gVX1u+qFrx6o=
+
+$ python example/message.py --prikey 1 --msg pybtc --sig ICvzXjwjJVMilSGyMqwlqMTuGF6UMwddFJzVmm0Di5qNnqkBRKP8Pldm3YbOskg3ewV1tszVLy8gVX1u+qFrx6o=
+# True
+```
+
+
 **example/taproot.py**
 
 This example demonstrates how to create a P2TR script with two script spending paths: p2pk and p2ms(2-of-2 multisig).

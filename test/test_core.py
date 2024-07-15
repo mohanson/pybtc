@@ -1,5 +1,6 @@
 import btc
 import random
+import string
 
 
 def test_hash160():
@@ -176,3 +177,12 @@ def test_witness():
     for _ in range(256):
         wits = [random.randbytes(random.randint(0, 256)) for _ in range(random.randint(0, 256))]
         assert btc.core.witness_decode(btc.core.witness_encode(wits)) == wits
+
+
+def test_message():
+    for _ in range(4):
+        prikey = btc.core.PriKey(random.randint(0, btc.secp256k1.N))
+        pubkey = prikey.pubkey()
+        msg = ''.join(random.choice(string.ascii_letters) for _ in range(random.randint(0, 1024)))
+        sig = btc.core.message_sign(prikey, msg)
+        assert btc.core.message_verify(pubkey, sig, msg)
