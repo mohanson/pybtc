@@ -117,6 +117,7 @@ class PubKey:
     def pt(self) -> btc.secp256k1.Pt:
         return btc.secp256k1.Pt(btc.secp256k1.Fq(self.x), btc.secp256k1.Fq(self.y))
 
+    @staticmethod
     def pt_decode(data: btc.secp256k1.Pt):
         return PubKey(data.x.x, data.y.x)
 
