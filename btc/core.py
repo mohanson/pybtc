@@ -114,6 +114,12 @@ class PubKey:
             'y': f'0x{self.y:064x}'
         }
 
+    def pt(self) -> btc.secp256k1.Pt:
+        return btc.secp256k1.Pt(btc.secp256k1.Fq(self.x), btc.secp256k1.Fq(self.y))
+
+    def pt_decode(data: btc.secp256k1.Pt):
+        return PubKey(data.x.x, data.y.x)
+
     def sec(self) -> bytearray:
         r = bytearray()
         if self.y & 1 == 0:
@@ -186,15 +192,16 @@ def address_p2wpkh(pubkey: PubKey) -> str:
 def address_p2tr(pubkey: PubKey, root: bytearray) -> str:
     # Taproot.
     # See https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki
+    origin_pubkey = pubkey.pt()
     if pubkey.y & 1 != 0:
         # Taproot requires that the y coordinate of the public key is even.
-        pubkey = PubKey(pubkey.x, btc.secp256k1.P - pubkey.y)
+        origin_pubkey = -origin_pubkey
     # There is no script path if root is empty.
     assert len(root) in [0x00, 0x20]
-    adjust_prikey_byte = hashtag('TapTweak', bytearray(pubkey.x.to_bytes(32)) + root)
+    adjust_prikey_byte = hashtag('TapTweak', bytearray(origin_pubkey.x.x.to_bytes(32)) + root)
     adjust_prikey = btc.secp256k1.Fr(int.from_bytes(adjust_prikey_byte))
     adjust_pubkey = btc.secp256k1.G * adjust_prikey
-    output_pubkey = btc.secp256k1.Pt(btc.secp256k1.Fq(pubkey.x), btc.secp256k1.Fq(pubkey.y)) + adjust_pubkey
+    output_pubkey = origin_pubkey + adjust_pubkey
     return btc.bech32.encode(btc.config.current.prefix.bech32, 1, bytearray(output_pubkey.x.x.to_bytes(32)))
 
 
@@ -819,4 +826,4 @@ def message_verify(pubkey: PubKey, sig: str, msg: str) -> bool:
     v = (sig[0] - 27) & 3
     r = btc.secp256k1.Fr(int.from_bytes(sig[0x01:0x21]))
     s = btc.secp256k1.Fr(int.from_bytes(sig[0x21:0x41]))
-    return btc.ecdsa.pubkey(m, r, s, v) == btc.secp256k1.Pt(btc.secp256k1.Fq(pubkey.x), btc.secp256k1.Fq(pubkey.y))
+    return btc.ecdsa.pubkey(m, r, s, v) == pubkey.pt()
