@@ -55,18 +55,23 @@ class PriKey:
         pubkey = btc.secp256k1.G * btc.secp256k1.Fr(self.n)
         return PubKey(pubkey.x.x, pubkey.y.x)
 
-    def sign_ecdsa(self, data: bytearray) -> bytearray:
+    def sign_ecdsa(self, data: bytearray) -> typing.Tuple[btc.secp256k1.Fr, btc.secp256k1.Fr, int]:
         assert len(data) == 32
         m = btc.secp256k1.Fr(int.from_bytes(data))
         for _ in itertools.repeat(0):
-            r, s, _ = btc.ecdsa.sign(btc.secp256k1.Fr(self.n), m)
+            r, s, v = btc.ecdsa.sign(btc.secp256k1.Fr(self.n), m)
             # We require that the S value inside ECDSA signatures is at most the curve order divided by 2 (essentially
             # restricting this value to its lower half range).
             # See: https://github.com/bitcoin/bips/blob/master/bip-0146.mediawiki
             if s.x * 2 >= btc.secp256k1.N:
                 s = -s
-            return der_encode(r, s)
+                v ^= 1
+            return r, s, v
         raise Exception
+
+    def sign_ecdsa_der(self, data: bytearray) -> bytearray:
+        r, s, _ = self.sign_ecdsa(data)
+        return der_encode(r, s)
 
     def sign_schnorr(self, data: bytearray) -> bytearray:
         assert len(data) == 32
@@ -797,34 +802,35 @@ class TapNode:
         self.r = r
 
 
-def message_hash(msg: str) -> bytearray:
-    data = bytearray()
-    # Text used to signify that a signed message follows and to prevent inadvertently signing a transaction.
-    data.extend(btc.core.compact_size_encode(24))
-    data.extend(bytearray('Bitcoin Signed Message:\n'.encode()))
-    data.extend(btc.core.compact_size_encode(len(msg)))
-    data.extend(bytearray(msg.encode()))
-    return btc.core.hash256(data)
+class Message:
+    def __init__(self, data: str) -> None:
+        self.data = data
 
+    def hash(self) -> bytearray:
+        b = bytearray()
+        # Text used to signify that a signed message follows and to prevent inadvertently signing a transaction.
+        b.extend(btc.core.compact_size_encode(24))
+        b.extend(bytearray('Bitcoin Signed Message:\n'.encode()))
+        b.extend(btc.core.compact_size_encode(len(self.data)))
+        b.extend(bytearray(self.data.encode()))
+        return btc.core.hash256(b)
 
-def message_sign(prikey: PriKey, msg: str) -> str:
-    m = btc.secp256k1.Fr(int.from_bytes(message_hash(msg)))
-    r, s, v = btc.ecdsa.sign(btc.secp256k1.Fr(prikey.n), m)
-    # Header Byte has the following ranges:
-    #   27-30: P2PKH uncompressed
-    #   31-34: P2PKH compressed
-    #   35-38: Segwit P2SH
-    #   39-42: Segwit Bech32
-    # See: https://github.com/bitcoin/bips/blob/master/bip-0137.mediawiki.
-    sig = bytearray([31 + v]) + bytearray(r.x.to_bytes(32)) + bytearray(s.x.to_bytes(32))
-    return base64.b64encode(sig).decode()
+    def sign(self, prikey: PriKey) -> str:
+        r, s, v = prikey.sign_ecdsa(self.hash())
+        # Header Byte has the following ranges:
+        #   27-30: P2PKH uncompressed
+        #   31-34: P2PKH compressed
+        #   35-38: Segwit P2SH
+        #   39-42: Segwit Bech32
+        # See: https://github.com/bitcoin/bips/blob/master/bip-0137.mediawiki.
+        sig = bytearray([31 + v]) + bytearray(r.x.to_bytes(32)) + bytearray(s.x.to_bytes(32))
+        return base64.b64encode(sig).decode()
 
-
-def message_verify(pubkey: PubKey, sig: str, msg: str) -> bool:
-    m = btc.secp256k1.Fr(int.from_bytes(message_hash(msg)))
-    sig = base64.b64decode(sig)
-    assert sig[0] >= 27
-    v = (sig[0] - 27) & 3
-    r = btc.secp256k1.Fr(int.from_bytes(sig[0x01:0x21]))
-    s = btc.secp256k1.Fr(int.from_bytes(sig[0x21:0x41]))
-    return btc.ecdsa.pubkey(m, r, s, v) == pubkey.pt()
+    def pubkey(self, sig: str) -> PubKey:
+        m = btc.secp256k1.Fr(int.from_bytes(self.hash()))
+        sig = base64.b64decode(sig)
+        assert sig[0] >= 27
+        v = (sig[0] - 27) & 3
+        r = btc.secp256k1.Fr(int.from_bytes(sig[0x01:0x21]))
+        s = btc.secp256k1.Fr(int.from_bytes(sig[0x21:0x41]))
+        return PubKey.pt_decode(btc.ecdsa.pubkey(m, r, s, v))

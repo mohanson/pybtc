@@ -131,7 +131,7 @@ class Tp2pkh:
 
     def sign(self, tx: btc.core.Transaction) -> None:
         for i, e in enumerate(tx.vin):
-            s = self.prikey.sign_ecdsa(tx.digest_legacy(i, btc.core.sighash_all, e.out_point.load().script_pubkey))
+            s = self.prikey.sign_ecdsa_der(tx.digest_legacy(i, btc.core.sighash_all, e.out_point.load().script_pubkey))
             s.append(btc.core.sighash_all)
             e.script_sig = btc.core.script([
                 btc.opcode.op_pushdata(s),
@@ -173,7 +173,7 @@ class Tp2shp2ms:
             script_sig = []
             script_sig.append(btc.opcode.op_0)
             for prikey in self.prikey:
-                s = prikey.sign_ecdsa(tx.digest_legacy(i, btc.core.sighash_all, self.redeem))
+                s = prikey.sign_ecdsa_der(tx.digest_legacy(i, btc.core.sighash_all, self.redeem))
                 s.append(btc.core.sighash_all)
                 script_sig.append(btc.opcode.op_pushdata(s))
             script_sig.append(btc.opcode.op_pushdata(self.redeem))
@@ -223,7 +223,7 @@ class Tp2shp2wpkh:
         ]))])
         for i, e in enumerate(tx.vin):
             e.script_sig = script_sig
-            s = self.prikey.sign_ecdsa(tx.digest_segwit_v0(i, btc.core.sighash_all, script_code))
+            s = self.prikey.sign_ecdsa_der(tx.digest_segwit_v0(i, btc.core.sighash_all, script_code))
             s.append(btc.core.sighash_all)
             e.witness[0] = s
             e.witness[1] = self.pubkey.sec()
@@ -262,7 +262,7 @@ class Tp2wpkh:
                 btc.opcode.op_checksig,
             ]))])
         for i, e in enumerate(tx.vin):
-            s = self.prikey.sign_ecdsa(tx.digest_segwit_v0(i, btc.core.sighash_all, script_code))
+            s = self.prikey.sign_ecdsa_der(tx.digest_segwit_v0(i, btc.core.sighash_all, script_code))
             s.append(btc.core.sighash_all)
             e.witness[0] = s
             e.witness[1] = self.pubkey.sec()

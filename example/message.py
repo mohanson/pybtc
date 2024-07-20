@@ -13,7 +13,7 @@ prikey = btc.core.PriKey(int(args.prikey, 0))
 pubkey = prikey.pubkey()
 
 if args.sig == '':
-    print(btc.core.message_sign(prikey, args.msg))
+    print(btc.core.Message(args.msg).sign(prikey))
 
 if args.sig != '':
-    print(btc.core.message_verify(pubkey, args.sig, args.msg))
+    print(btc.core.Message(args.msg).pubkey(args.sig) == pubkey)

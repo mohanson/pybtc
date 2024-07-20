@@ -183,6 +183,6 @@ def test_message():
     for _ in range(4):
         prikey = btc.core.PriKey(random.randint(0, btc.secp256k1.N))
         pubkey = prikey.pubkey()
-        msg = ''.join(random.choice(string.ascii_letters) for _ in range(random.randint(0, 1024)))
-        sig = btc.core.message_sign(prikey, msg)
-        assert btc.core.message_verify(pubkey, sig, msg)
+        msg = btc.core.Message(''.join(random.choice(string.ascii_letters) for _ in range(random.randint(0, 1024))))
+        sig = msg.sign(prikey)
+        assert msg.pubkey(sig) == pubkey
