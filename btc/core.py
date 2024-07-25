@@ -89,8 +89,8 @@ class PriKey:
         data.extend(checksum)
         return btc.base58.encode(data)
 
-    @staticmethod
-    def wif_decode(data: str) -> Self:
+    @classmethod
+    def wif_decode(cls, data: str) -> Self:
         data = btc.base58.decode(data)
         assert data[0] == btc.config.current.prefix.wif
         assert hash256(data[:-4])[:4] == data[-4:]
@@ -122,8 +122,8 @@ class PubKey:
     def pt(self) -> btc.secp256k1.Pt:
         return btc.secp256k1.Pt(btc.secp256k1.Fq(self.x), btc.secp256k1.Fq(self.y))
 
-    @staticmethod
-    def pt_decode(data: btc.secp256k1.Pt):
+    @classmethod
+    def pt_decode(cls, data: btc.secp256k1.Pt) -> Self:
         return PubKey(data.x.x, data.y.x)
 
     def sec(self) -> bytearray:
@@ -135,8 +135,8 @@ class PubKey:
         r.extend(self.x.to_bytes(32))
         return r
 
-    @staticmethod
-    def sec_decode(data: bytearray) -> Self:
+    @classmethod
+    def sec_decode(cls, data: bytearray) -> Self:
         p = data[0]
         assert p in [0x02, 0x03, 0x04]
         x = int.from_bytes(data[1:33])
@@ -605,8 +605,8 @@ class Transaction:
         else:
             return self.serialize_legacy()
 
-    @staticmethod
-    def serialize_decode_legacy(data: bytearray) -> Self:
+    @classmethod
+    def serialize_decode_legacy(cls, data: bytearray) -> Self:
         reader = io.BytesIO(data)
         tx = Transaction(0, [], [], 0)
         tx.version = int.from_bytes(reader.read(4), 'little')
@@ -623,8 +623,8 @@ class Transaction:
         tx.locktime = int.from_bytes(reader.read(4), 'little')
         return tx
 
-    @staticmethod
-    def serialize_decode_segwit(data: bytearray) -> Self:
+    @classmethod
+    def serialize_decode_segwit(cls, data: bytearray) -> Self:
         reader = io.BytesIO(data)
         tx = Transaction(0, [], [], 0)
         tx.version = int.from_bytes(reader.read(4), 'little')
@@ -645,8 +645,8 @@ class Transaction:
         tx.locktime = int.from_bytes(reader.read(4), 'little')
         return tx
 
-    @staticmethod
-    def serialize_decode(data: bytearray) -> Self:
+    @classmethod
+    def serialize_decode(cls, data: bytearray) -> Self:
         if data[4] == 0x00:
             return Transaction.serialize_decode_segwit(data)
         else:
