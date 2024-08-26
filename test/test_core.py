@@ -3,52 +3,6 @@ import random
 import string
 
 
-def test_hash160():
-    hash = btc.core.hash160(bytearray([0, 1, 2, 3]))
-    assert hash.hex() == '3c3fa3d4adcaf8f52d5b1843975e122548269937'
-
-
-def test_prikey():
-    prikey = btc.core.PriKey(1)
-    pubkey = prikey.pubkey()
-    assert pubkey.x == 0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798
-    assert pubkey.y == 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
-
-
-def test_prikey_wif():
-    btc.config.current = btc.config.mainnet
-    prikey = btc.core.PriKey(1)
-    assert prikey.wif() == 'KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn'
-    assert prikey == btc.core.PriKey.wif_decode(prikey.wif())
-    btc.config.current = btc.config.testnet
-    assert prikey.wif() == 'cMahea7zqjxrtgAbB7LSGbcQUr1uX1ojuat9jZodMN87JcbXMTcA'
-    assert prikey == btc.core.PriKey.wif_decode(prikey.wif())
-
-
-def test_pubkey_sec():
-    pubkey = btc.core.PubKey(
-        0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798,
-        0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
-    )
-    assert pubkey.sec().hex() == '0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798'
-
-
-def test_pubkey_sec_read():
-    pubkey = btc.core.PubKey.sec_decode(bytes.fromhex(''.join([
-        '04',
-        '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
-        '483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8'
-    ])))
-    assert pubkey.x == 0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798
-    assert pubkey.y == 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
-    pubkey = btc.core.PubKey.sec_decode(bytes.fromhex(''.join([
-        '02',
-        '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
-    ])))
-    assert pubkey.x == 0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798
-    assert pubkey.y == 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
-
-
 def test_address_p2pkh():
     btc.config.current = btc.config.mainnet
     prikey = btc.core.PriKey(1)
@@ -100,17 +54,6 @@ def test_address_p2sh_p2wpkh():
     assert addr == '2NAUYAHhujozruyzpsFRP63mbrdaU5wnEpN'
 
 
-def test_address_p2wpkh():
-    btc.config.current = btc.config.mainnet
-    prikey = btc.core.PriKey(1)
-    pubkey = prikey.pubkey()
-    addr = btc.core.address_p2wpkh(pubkey)
-    assert addr == 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4'
-    btc.config.current = btc.config.testnet
-    addr = btc.core.address_p2wpkh(pubkey)
-    assert addr == 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx'
-
-
 def test_address_p2tr():
     btc.config.current = btc.config.mainnet
     prikey = btc.core.PriKey(1)
@@ -120,6 +63,17 @@ def test_address_p2tr():
     btc.config.current = btc.config.testnet
     addr = btc.core.address_p2tr(pubkey, bytearray())
     assert addr == 'tb1pmfr3p9j00pfxjh0zmgp99y8zftmd3s5pmedqhyptwy6lm87hf5ssk79hv2'
+
+
+def test_address_p2wpkh():
+    btc.config.current = btc.config.mainnet
+    prikey = btc.core.PriKey(1)
+    pubkey = prikey.pubkey()
+    addr = btc.core.address_p2wpkh(pubkey)
+    assert addr == 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4'
+    btc.config.current = btc.config.testnet
+    addr = btc.core.address_p2wpkh(pubkey)
+    assert addr == 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx'
 
 
 def test_compact_size():
@@ -143,6 +97,66 @@ def test_der():
         r1, s1 = btc.core.der_decode(btc.core.der_encode(r0, s0))
         assert r0 == r1
         assert s0 == s1
+
+
+def test_difficulty_target():
+    assert btc.core.difficulty_target(0x1b0404cb) == 0x00000000000404CB000000000000000000000000000000000000000000000000
+    assert btc.core.difficulty_target(0x1d00ffff) == 0x00000000FFFF0000000000000000000000000000000000000000000000000000
+
+
+def test_hash160():
+    hash = btc.core.hash160(bytearray([0, 1, 2, 3]))
+    assert hash.hex() == '3c3fa3d4adcaf8f52d5b1843975e122548269937'
+
+
+def test_message():
+    for _ in range(4):
+        prikey = btc.core.PriKey(random.randint(0, btc.secp256k1.N))
+        pubkey = prikey.pubkey()
+        msg = btc.core.Message(''.join(random.choice(string.ascii_letters) for _ in range(random.randint(0, 1024))))
+        sig = msg.sign(prikey)
+        assert msg.pubkey(sig) == pubkey
+
+
+def test_prikey():
+    prikey = btc.core.PriKey(1)
+    pubkey = prikey.pubkey()
+    assert pubkey.x == 0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798
+    assert pubkey.y == 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
+
+
+def test_prikey_wif():
+    btc.config.current = btc.config.mainnet
+    prikey = btc.core.PriKey(1)
+    assert prikey.wif() == 'KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn'
+    assert prikey == btc.core.PriKey.wif_decode(prikey.wif())
+    btc.config.current = btc.config.testnet
+    assert prikey.wif() == 'cMahea7zqjxrtgAbB7LSGbcQUr1uX1ojuat9jZodMN87JcbXMTcA'
+    assert prikey == btc.core.PriKey.wif_decode(prikey.wif())
+
+
+def test_pubkey_sec():
+    pubkey = btc.core.PubKey(
+        0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798,
+        0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
+    )
+    assert pubkey.sec().hex() == '0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798'
+
+
+def test_pubkey_sec_read():
+    pubkey = btc.core.PubKey.sec_decode(bytes.fromhex(''.join([
+        '04',
+        '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
+        '483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8'
+    ])))
+    assert pubkey.x == 0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798
+    assert pubkey.y == 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
+    pubkey = btc.core.PubKey.sec_decode(bytes.fromhex(''.join([
+        '02',
+        '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
+    ])))
+    assert pubkey.x == 0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798
+    assert pubkey.y == 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
 
 
 def test_transaction():
@@ -177,12 +191,3 @@ def test_witness():
     for _ in range(256):
         wits = [random.randbytes(random.randint(0, 256)) for _ in range(random.randint(0, 256))]
         assert btc.core.witness_decode(btc.core.witness_encode(wits)) == wits
-
-
-def test_message():
-    for _ in range(4):
-        prikey = btc.core.PriKey(random.randint(0, btc.secp256k1.N))
-        pubkey = prikey.pubkey()
-        msg = btc.core.Message(''.join(random.choice(string.ascii_letters) for _ in range(random.randint(0, 1024))))
-        sig = msg.sign(prikey)
-        assert msg.pubkey(sig) == pubkey

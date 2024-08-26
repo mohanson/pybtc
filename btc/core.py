@@ -245,6 +245,28 @@ def compact_size_decode_reader(reader: typing.BinaryIO) -> int:
     raise Exception
 
 
+def difficulty_target(bits: int) -> int:
+    assert bits >= 0x00
+    assert bits <= 0xffffffff
+    base = bits & 0xffffff
+    # Since targets are never negative in practice, however, this means the largest legal value for the lower 24 bits
+    # is 0x7fffff. Additionally, 0x008000 is the smallest legal value for the lower 24 bits since targets are always
+    # stored with the lowest possible exponent.
+    assert base >= 0x008000
+    assert base <= 0x7fffff
+    exps = bits >> 24
+    return base * 2**(8*(exps - 3))
+
+
+def difficulty_bits(bits: int) -> float:
+    # The highest possible target (difficulty 1) is defined as 0x1d00ffff.
+    return difficulty_target(0x1d00ffff) / difficulty_target(bits)
+
+
+def difficulty_hash_rate(d: float) -> float:
+    return d * 2**32 / 600
+
+
 class HashType:
     def __init__(self, n: int) -> None:
         assert n in [
@@ -782,26 +804,6 @@ def witness_decode_reader(r: typing.BinaryIO) -> typing.List[bytearray]:
     return wits
 
 
-class TapLeaf:
-    def __init__(self, script: bytearray) -> None:
-        data = bytearray()
-        data.append(0xc0)
-        data.extend(compact_size_encode(len(script)))
-        data.extend(script)
-        self.hash = hashtag('TapLeaf', data)
-        self.script = script
-
-
-class TapNode:
-    def __init__(self, l: typing.Self | TapLeaf, r: typing.Self | TapLeaf) -> None:
-        if l.hash < r.hash:
-            self.hash = hashtag('TapBranch', l.hash + r.hash)
-        else:
-            self.hash = hashtag('TapBranch', r.hash + l.hash)
-        self.l = l
-        self.r = r
-
-
 class Message:
     def __init__(self, data: str) -> None:
         self.data = data
@@ -834,3 +836,23 @@ class Message:
         r = btc.secp256k1.Fr(int.from_bytes(sig[0x01:0x21]))
         s = btc.secp256k1.Fr(int.from_bytes(sig[0x21:0x41]))
         return PubKey.pt_decode(btc.ecdsa.pubkey(m, r, s, v))
+
+
+class TapLeaf:
+    def __init__(self, script: bytearray) -> None:
+        data = bytearray()
+        data.append(0xc0)
+        data.extend(compact_size_encode(len(script)))
+        data.extend(script)
+        self.hash = hashtag('TapLeaf', data)
+        self.script = script
+
+
+class TapNode:
+    def __init__(self, l: typing.Self | TapLeaf, r: typing.Self | TapLeaf) -> None:
+        if l.hash < r.hash:
+            self.hash = hashtag('TapBranch', l.hash + r.hash)
+        else:
+            self.hash = hashtag('TapBranch', r.hash + l.hash)
+        self.l = l
+        self.r = r

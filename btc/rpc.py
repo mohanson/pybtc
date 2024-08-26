@@ -28,7 +28,7 @@ def wait(txid: str):
     if btc.config.current == btc.config.develop:
         return
     for _ in itertools.repeat(0):
-        r = get_raw_transaction(txid, True)
+        r = get_raw_transaction(txid)
         if r['in_active_chain']:
             break
         time.sleep(1)
@@ -42,8 +42,8 @@ def get_best_block_hash() -> str:
     return call('getbestblockhash', [])
 
 
-def get_block():
-    pass
+def get_block(blockhash: str) -> typing.Dict:
+    return call('getblock', [blockhash])
 
 
 def get_block_chain_info():
@@ -314,8 +314,8 @@ def fund_raw_transaction():
     pass
 
 
-def get_raw_transaction(txid: str, verbose: bool = False) -> typing.Dict:
-    return call('getrawtransaction', [txid, verbose])
+def get_raw_transaction(txid: str) -> typing.Dict:
+    return call('getrawtransaction', [txid])
 
 
 def join_psbts():
