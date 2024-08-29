@@ -255,7 +255,10 @@ def difficulty_target(bits: int) -> int:
     assert base >= 0x008000
     assert base <= 0x7fffff
     exps = bits >> 24
-    return base * 2**(8*(exps - 3))
+    if exps <= 3:
+        return base >> (8 * (3 - exps))
+    else:
+        return base << (8 * (exps - 3))
 
 
 def difficulty_bits(bits: int) -> float:
@@ -263,8 +266,9 @@ def difficulty_bits(bits: int) -> float:
     return difficulty_target(0x1d00ffff) / difficulty_target(bits)
 
 
-def difficulty_hash_rate(d: float) -> float:
-    return d * 2**32 / 600
+def difficulty_hash_rate(difficulty: float) -> float:
+    # Get network hash rate results in a given difficulty.
+    return difficulty * 2**32 / 600
 
 
 class HashType:
