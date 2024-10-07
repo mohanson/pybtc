@@ -261,7 +261,9 @@ def difficulty_target(bits: int) -> int:
         return base << (8 * (exps - 3))
 
 
-def difficulty_bits(bits: int) -> float:
+def difficulty(bits: int) -> float:
+    # The formula of difficulty is difficulty_1_target / current_target (target is a 256 bit number).
+    # See https://en.bitcoin.it/wiki/Difficulty.
     # The highest possible target (difficulty 1) is defined as 0x1d00ffff.
     return difficulty_target(0x1d00ffff) / difficulty_target(bits)
 

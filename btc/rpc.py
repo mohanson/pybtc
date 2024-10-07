@@ -62,8 +62,8 @@ def get_block_hash():
     pass
 
 
-def get_block_header():
-    pass
+def get_block_header(blockhash: str) -> typing.Dict:
+    return call('getblockheader', [blockhash, True])
 
 
 def get_block_stats():
@@ -78,8 +78,8 @@ def get_chain_tx_stats():
     pass
 
 
-def get_difficulty():
-    pass
+def get_difficulty() -> decimal.Decimal:
+    return call('getdifficulty', [])
 
 
 def get_mempool_ancestors():
