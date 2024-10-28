@@ -15,7 +15,6 @@ import math
 import io
 import json
 import typing
-Self = typing.Self
 
 sighash_default = 0x00
 sighash_all = 0x01
@@ -90,7 +89,7 @@ class PriKey:
         return btc.base58.encode(data)
 
     @classmethod
-    def wif_decode(cls, data: str) -> Self:
+    def wif_decode(cls, data: str) -> typing.Self:
         data = btc.base58.decode(data)
         assert data[0] == btc.config.current.prefix.wif
         assert hash256(data[:-4])[:4] == data[-4:]
@@ -123,7 +122,7 @@ class PubKey:
         return btc.secp256k1.Pt(btc.secp256k1.Fq(self.x), btc.secp256k1.Fq(self.y))
 
     @classmethod
-    def pt_decode(cls, data: btc.secp256k1.Pt) -> Self:
+    def pt_decode(cls, data: btc.secp256k1.Pt) -> typing.Self:
         return PubKey(data.x.x, data.y.x)
 
     def sec(self) -> bytearray:
@@ -136,7 +135,7 @@ class PubKey:
         return r
 
     @classmethod
-    def sec_decode(cls, data: bytearray) -> Self:
+    def sec_decode(cls, data: bytearray) -> typing.Self:
         p = data[0]
         assert p in [0x02, 0x03, 0x04]
         x = int.from_bytes(data[1:33])
@@ -307,7 +306,7 @@ class OutPoint:
             self.vout == other.vout,
         ])
 
-    def copy(self) -> Self:
+    def copy(self) -> typing.Self:
         return OutPoint(self.txid.copy(), self.vout)
 
     def json(self) -> typing.Dict:
@@ -350,7 +349,7 @@ class TxIn:
             self.witness == other.witness,
         ])
 
-    def copy(self) -> Self:
+    def copy(self) -> typing.Self:
         return TxIn(self.out_point.copy(), self.script_sig.copy(), self.sequence, [e.copy() for e in self.witness])
 
     def json(self) -> typing.Dict:
@@ -378,7 +377,7 @@ class TxOut:
             self.script_pubkey == other.script_pubkey,
         ])
 
-    def copy(self) -> Self:
+    def copy(self) -> typing.Self:
         return TxOut(self.value, self.script_pubkey.copy())
 
     def json(self) -> typing.Dict:
@@ -408,7 +407,7 @@ class Transaction:
             self.locktime == other.locktime,
         ])
 
-    def copy(self) -> Self:
+    def copy(self) -> typing.Self:
         return Transaction(self.version, [i.copy() for i in self.vin], [o.copy() for o in self.vout], self.locktime)
 
     def digest_legacy(self, i: int, hash_type: int, script_code: bytearray) -> bytearray:
@@ -634,7 +633,7 @@ class Transaction:
             return self.serialize_legacy()
 
     @classmethod
-    def serialize_decode_legacy(cls, data: bytearray) -> Self:
+    def serialize_decode_legacy(cls, data: bytearray) -> typing.Self:
         reader = io.BytesIO(data)
         tx = Transaction(0, [], [], 0)
         tx.version = int.from_bytes(reader.read(4), 'little')
@@ -652,7 +651,7 @@ class Transaction:
         return tx
 
     @classmethod
-    def serialize_decode_segwit(cls, data: bytearray) -> Self:
+    def serialize_decode_segwit(cls, data: bytearray) -> typing.Self:
         reader = io.BytesIO(data)
         tx = Transaction(0, [], [], 0)
         tx.version = int.from_bytes(reader.read(4), 'little')
@@ -674,7 +673,7 @@ class Transaction:
         return tx
 
     @classmethod
-    def serialize_decode(cls, data: bytearray) -> Self:
+    def serialize_decode(cls, data: bytearray) -> typing.Self:
         if data[4] == 0x00:
             return Transaction.serialize_decode_segwit(data)
         else:
