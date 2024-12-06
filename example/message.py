@@ -1,5 +1,5 @@
 import argparse
-import btc
+import plbtc
 
 # Sign a message with the private key and verify it.
 
@@ -9,11 +9,11 @@ parser.add_argument('--prikey', type=str, help='private key')
 parser.add_argument('--sig', type=str, default='', help='the signature of the message encoded in base 64')
 args = parser.parse_args()
 
-prikey = btc.core.PriKey(int(args.prikey, 0))
+prikey = plbtc.core.PriKey(int(args.prikey, 0))
 pubkey = prikey.pubkey()
 
 if args.sig == '':
-    print(btc.core.Message(args.msg).sign(prikey))
+    print(plbtc.core.Message(args.msg).sign(prikey))
 
 if args.sig != '':
-    print(btc.core.Message(args.msg).pubkey(args.sig) == pubkey)
+    print(plbtc.core.Message(args.msg).pubkey(args.sig) == pubkey)

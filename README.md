@@ -1,21 +1,25 @@
-# Python SDK for BTC
+# Plbtc: Bitcoin Library For Humans
 
-Python BTC is an experimental project that aims to provide human-friendly interfaces for common BTC operations. Note that Python BTC is not a complete SDK, but only implements the BTC functions that I am interested in.
+Plbtc is a project that aims to provide human-friendly interfaces for common btc operations. Using plbtc, you can easily and happily complete everything you want to do on btc.
 
 Features:
 
-- No third-party dependencies. All code is visible.
-- Incredibly simple.
+- No third-party dependencies, everything is visible.
+- Incredibly simple, even a cat knows how to use it.
 
 ## Installation
 
 ```sh
-$ git clone https://github.com/mohanson/pybtc
-$ cd pybtc
+$ pip install plbtc
+# or
+$ git clone https://github.com/mohanson/plbtc
+$ cd plbtc
 $ python -m pip install --editable .
 ```
 
 ## Usage
+
+By default, plbtc is configured on the develop. To switch networks, use `plbtc.config.current = plbtc.config.mainnet`.
 
 **example/addr.py**
 

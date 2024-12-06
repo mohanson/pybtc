@@ -1,5 +1,5 @@
 import argparse
-import btc
+import plbtc
 
 # Transfer bitcoin to another account.
 
@@ -12,22 +12,22 @@ parser.add_argument('--value', type=float, help='bitcoin value')
 args = parser.parse_args()
 
 if args.net == 'develop':
-    btc.config.current = btc.config.develop
+    plbtc.config.current = plbtc.config.develop
 if args.net == 'mainnet':
-    btc.config.current = btc.config.mainnet
+    plbtc.config.current = plbtc.config.mainnet
 if args.net == 'testnet':
-    btc.config.current = btc.config.testnet
+    plbtc.config.current = plbtc.config.testnet
 
-accept_script = btc.core.script_pubkey(args.to)
-accept_value = int(args.value * btc.denomination.bitcoin)
+accept_script = plbtc.core.script_pubkey(args.to)
+accept_value = int(args.value * plbtc.denomination.bitcoin)
 prikey = int(args.prikey, 0)
 if args.script_type == 'p2pkh':
-    wallet = btc.wallet.Wallet(btc.wallet.Tp2pkh(prikey))
+    wallet = plbtc.wallet.Wallet(plbtc.wallet.Tp2pkh(prikey))
 if args.script_type == 'p2sh-p2wpkh':
-    wallet = btc.wallet.Wallet(btc.wallet.Tp2shp2wpkh(prikey))
+    wallet = plbtc.wallet.Wallet(plbtc.wallet.Tp2shp2wpkh(prikey))
 if args.script_type == 'p2wpkh':
-    wallet = btc.wallet.Wallet(btc.wallet.Tp2wpkh(prikey))
+    wallet = plbtc.wallet.Wallet(plbtc.wallet.Tp2wpkh(prikey))
 if args.script_type == 'p2tr':
-    wallet = btc.wallet.Wallet(btc.wallet.Tp2tr(prikey, bytearray()))
+    wallet = plbtc.wallet.Wallet(plbtc.wallet.Tp2tr(prikey, bytearray()))
 txid = wallet.transfer(accept_script, accept_value)
 print(f'0x{txid.hex()}')

@@ -1,23 +1,23 @@
-import btc.config
 import decimal
 import itertools
 import random
 import requests
 import time
 import typing
+import plbtc.config
 
 # Doc: https://developer.bitcoin.org/reference/rpc/
 
 
 def call(method: str, params: typing.List[typing.Any]) -> typing.Any:
-    r = requests.post(btc.config.current.rpc.addr, json={
+    r = requests.post(plbtc.config.current.rpc.addr, json={
         'id': random.randint(0x00000000, 0xffffffff),
         'jsonrpc': '2.0',
         'method': method,
         'params': params,
     }, auth=(
-        btc.config.current.rpc.username,
-        btc.config.current.rpc.password,
+        plbtc.config.current.rpc.username,
+        plbtc.config.current.rpc.password,
     )).json(parse_float=decimal.Decimal)
     if 'error' in r and r['error']:
         raise Exception(r['error'])
@@ -25,7 +25,7 @@ def call(method: str, params: typing.List[typing.Any]) -> typing.Any:
 
 
 def wait(txid: str):
-    if btc.config.current == btc.config.develop:
+    if plbtc.config.current == plbtc.config.develop:
         return
     for _ in itertools.repeat(0):
         r = get_raw_transaction(txid)
@@ -353,7 +353,7 @@ def derive_addresses():
 def estimates_mart_fee(conf_target: int) -> typing.Dict:
     # A mock is required on RegTest to allow this RPC to return meaningful data.
     # See: https://github.com/bitcoin/bitcoin/issues/11500
-    if btc.config.current == btc.config.develop:
+    if plbtc.config.current == plbtc.config.develop:
         return {'feerate': decimal.Decimal('0.00001'), 'blocks': conf_target}
     return call('estimatesmartfee', [conf_target, 'ECONOMICAL'])
 
