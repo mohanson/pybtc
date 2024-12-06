@@ -3,18 +3,15 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "pybtc"
-version = "1.1.1"
+name = "yabtc"
+version = "1.2.0"
 authors = [
   { name="Mohanson", email="mohanson@outlook.com" },
 ]
-description = "Python SDK for BTC"
+description = "Yabtc: bitcoin library for humans"
 readme = "README.md"
 license = { file = "LICENSE" }
 dependencies = ["requests"]
 
 [project.urls]
-homepage = "https://github.com/mohanson/pybtc"
-
-[tool.hatch.build.targets.wheel]
-packages = ["btc"]
+homepage = "https://github.com/mohanson/yabtc"

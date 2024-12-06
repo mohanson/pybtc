@@ -1,78 +1,78 @@
-import btc
 import random
 import string
+import yabtc
 
 
 def test_address_p2pkh():
-    btc.config.current = btc.config.mainnet
-    prikey = btc.core.PriKey(1)
+    yabtc.config.current = yabtc.config.mainnet
+    prikey = yabtc.core.PriKey(1)
     pubkey = prikey.pubkey()
-    addr = btc.core.address_p2pkh(pubkey)
+    addr = yabtc.core.address_p2pkh(pubkey)
     assert addr == '1BgGZ9tcN4rm9KBzDn7KprQz87SZ26SAMH'
-    btc.config.current = btc.config.testnet
-    addr = btc.core.address_p2pkh(pubkey)
+    yabtc.config.current = yabtc.config.testnet
+    addr = yabtc.core.address_p2pkh(pubkey)
     assert addr == 'mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r'
 
 
 def test_address_p2sh():
     # https://en.bitcoin.it/wiki/Pay_to_script_hash
     # https://mempool.space/tx/40eee3ae1760e3a8532263678cdf64569e6ad06abc133af64f735e52562bccc8
-    btc.config.current = btc.config.mainnet
+    yabtc.config.current = yabtc.config.mainnet
     pubkey = bytearray()
     pubkey.append(0x04)
     pubkey.extend(bytearray.fromhex('2f90074d7a5bf30c72cf3a8dfd1381bdbd30407010e878f3a11269d5f74a5878'))
     pubkey.extend(bytearray.fromhex('8505cdca22ea6eab7cfb40dc0e07aba200424ab0d79122a653ad0c7ec9896bdf'))
-    redeem = btc.core.script([
-        btc.opcode.op_1,
-        btc.opcode.op_pushdata(pubkey),
-        btc.opcode.op_1,
-        btc.opcode.op_checkmultisig,
+    redeem = yabtc.core.script([
+        yabtc.opcode.op_1,
+        yabtc.opcode.op_pushdata(pubkey),
+        yabtc.opcode.op_1,
+        yabtc.opcode.op_checkmultisig,
     ])
-    addr = btc.core.address_p2sh(redeem)
+    addr = yabtc.core.address_p2sh(redeem)
     assert addr == '3P14159f73E4gFr7JterCCQh9QjiTjiZrG'
 
 
 def test_address_p2sh_p2ms():
-    btc.config.current = btc.config.develop
-    keys = [btc.core.PubKey.sec_decode(bytearray.fromhex(e)) for e in [
+    yabtc.config.current = yabtc.config.develop
+    keys = [yabtc.core.PubKey.sec_decode(bytearray.fromhex(e)) for e in [
         '03150176a55b6d77eec5740c1f87f434cf416d5bbde1704bd816288a4466afb7bb',
         '02c3b2d3baf90e559346895b43253407fbb345c146910837b61f301f4c9a7edfe5',
         '02c6e3e94f7ff77457da9e76cf0779ca7c1e8575db064a2ea55400e6a9d8190225',
     ]]
-    addr = btc.core.address_p2sh_p2ms(2, keys)
+    addr = yabtc.core.address_p2sh_p2ms(2, keys)
     assert addr == '2MyxShnGQ5NifGb8CHYrtmzosRySxZ9pZo5'
 
 
 def test_address_p2sh_p2wpkh():
-    btc.config.current = btc.config.mainnet
-    prikey = btc.core.PriKey(1)
+    yabtc.config.current = yabtc.config.mainnet
+    prikey = yabtc.core.PriKey(1)
     pubkey = prikey.pubkey()
-    addr = btc.core.address_p2sh_p2wpkh(pubkey)
+    addr = yabtc.core.address_p2sh_p2wpkh(pubkey)
     assert addr == '3JvL6Ymt8MVWiCNHC7oWU6nLeHNJKLZGLN'
-    btc.config.current = btc.config.testnet
-    addr = btc.core.address_p2sh_p2wpkh(pubkey)
+    yabtc.config.current = yabtc.config.testnet
+    addr = yabtc.core.address_p2sh_p2wpkh(pubkey)
     assert addr == '2NAUYAHhujozruyzpsFRP63mbrdaU5wnEpN'
 
 
 def test_address_p2tr():
-    btc.config.current = btc.config.mainnet
-    prikey = btc.core.PriKey(1)
+    yabtc.config.current = yabtc.config.mainnet
+    prikey = yabtc.core.PriKey(1)
     pubkey = prikey.pubkey()
-    addr = btc.core.address_p2tr(pubkey, bytearray())
+    addr = yabtc.core.address_p2tr(pubkey, bytearray())
     assert addr == 'bc1pmfr3p9j00pfxjh0zmgp99y8zftmd3s5pmedqhyptwy6lm87hf5sspknck9'
-    btc.config.current = btc.config.testnet
-    addr = btc.core.address_p2tr(pubkey, bytearray())
+    yabtc.config.current = yabtc.config.testnet
+    addr = yabtc.core.address_p2tr(pubkey, bytearray())
     assert addr == 'tb1pmfr3p9j00pfxjh0zmgp99y8zftmd3s5pmedqhyptwy6lm87hf5ssk79hv2'
 
 
 def test_address_p2wpkh():
-    btc.config.current = btc.config.mainnet
-    prikey = btc.core.PriKey(1)
+    yabtc.config.current = yabtc.config.mainnet
+    prikey = yabtc.core.PriKey(1)
     pubkey = prikey.pubkey()
-    addr = btc.core.address_p2wpkh(pubkey)
+    addr = yabtc.core.address_p2wpkh(pubkey)
     assert addr == 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4'
-    btc.config.current = btc.config.testnet
-    addr = btc.core.address_p2wpkh(pubkey)
+    yabtc.config.current = yabtc.config.testnet
+    addr = yabtc.core.address_p2wpkh(pubkey)
     assert addr == 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx'
 
 
@@ -86,57 +86,59 @@ def test_compact_size():
         [0xb4da564e2857, bytearray([0xff, 0x57, 0x28, 0x4e, 0x56, 0xda, 0xb4, 0x00, 0x00])],
         [0x4bf583a17d59c158, bytearray([0xff, 0x58, 0xc1, 0x59, 0x7d, 0xa1, 0x83, 0xf5, 0x4b])],
     ]:
-        assert btc.core.compact_size_encode(n) == b
-        assert btc.core.compact_size_decode(b) == n
+        assert yabtc.core.compact_size_encode(n) == b
+        assert yabtc.core.compact_size_decode(b) == n
 
 
 def test_der():
     for _ in range(256):
-        r0 = btc.secp256k1.Fr(random.randint(0, btc.secp256k1.N - 1))
-        s0 = btc.secp256k1.Fr(random.randint(0, btc.secp256k1.N - 1))
-        r1, s1 = btc.core.der_decode(btc.core.der_encode(r0, s0))
+        r0 = yabtc.secp256k1.Fr(random.randint(0, yabtc.secp256k1.N - 1))
+        s0 = yabtc.secp256k1.Fr(random.randint(0, yabtc.secp256k1.N - 1))
+        r1, s1 = yabtc.core.der_decode(yabtc.core.der_encode(r0, s0))
         assert r0 == r1
         assert s0 == s1
 
 
 def test_difficulty_target():
-    assert btc.core.difficulty_target(0x1b0404cb) == 0x00000000000404CB000000000000000000000000000000000000000000000000
-    assert btc.core.difficulty_target(0x1d00ffff) == 0x00000000FFFF0000000000000000000000000000000000000000000000000000
+    assert yabtc.core.difficulty_target(
+        0x1b0404cb) == 0x00000000000404CB000000000000000000000000000000000000000000000000
+    assert yabtc.core.difficulty_target(
+        0x1d00ffff) == 0x00000000FFFF0000000000000000000000000000000000000000000000000000
 
 
 def test_hash160():
-    hash = btc.core.hash160(bytearray([0, 1, 2, 3]))
+    hash = yabtc.core.hash160(bytearray([0, 1, 2, 3]))
     assert hash.hex() == '3c3fa3d4adcaf8f52d5b1843975e122548269937'
 
 
 def test_message():
     for _ in range(4):
-        prikey = btc.core.PriKey(random.randint(0, btc.secp256k1.N))
+        prikey = yabtc.core.PriKey(random.randint(0, yabtc.secp256k1.N))
         pubkey = prikey.pubkey()
-        msg = btc.core.Message(''.join(random.choice(string.ascii_letters) for _ in range(random.randint(0, 1024))))
+        msg = yabtc.core.Message(''.join(random.choice(string.ascii_letters) for _ in range(random.randint(0, 1024))))
         sig = msg.sign(prikey)
         assert msg.pubkey(sig) == pubkey
 
 
 def test_prikey():
-    prikey = btc.core.PriKey(1)
+    prikey = yabtc.core.PriKey(1)
     pubkey = prikey.pubkey()
     assert pubkey.x == 0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798
     assert pubkey.y == 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
 
 
 def test_prikey_wif():
-    btc.config.current = btc.config.mainnet
-    prikey = btc.core.PriKey(1)
+    yabtc.config.current = yabtc.config.mainnet
+    prikey = yabtc.core.PriKey(1)
     assert prikey.wif() == 'KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn'
-    assert prikey == btc.core.PriKey.wif_decode(prikey.wif())
-    btc.config.current = btc.config.testnet
+    assert prikey == yabtc.core.PriKey.wif_decode(prikey.wif())
+    yabtc.config.current = yabtc.config.testnet
     assert prikey.wif() == 'cMahea7zqjxrtgAbB7LSGbcQUr1uX1ojuat9jZodMN87JcbXMTcA'
-    assert prikey == btc.core.PriKey.wif_decode(prikey.wif())
+    assert prikey == yabtc.core.PriKey.wif_decode(prikey.wif())
 
 
 def test_pubkey_sec():
-    pubkey = btc.core.PubKey(
+    pubkey = yabtc.core.PubKey(
         0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798,
         0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
     )
@@ -144,14 +146,14 @@ def test_pubkey_sec():
 
 
 def test_pubkey_sec_read():
-    pubkey = btc.core.PubKey.sec_decode(bytes.fromhex(''.join([
+    pubkey = yabtc.core.PubKey.sec_decode(bytes.fromhex(''.join([
         '04',
         '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
         '483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8'
     ])))
     assert pubkey.x == 0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798
     assert pubkey.y == 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
-    pubkey = btc.core.PubKey.sec_decode(bytes.fromhex(''.join([
+    pubkey = yabtc.core.PubKey.sec_decode(bytes.fromhex(''.join([
         '02',
         '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
     ])))
@@ -177,7 +179,7 @@ def test_transaction():
         0xb0, 0xd2, 0xfa, 0x2b, 0x42, 0xa4, 0x51, 0x82, 0xfc, 0x83, 0xe8, 0x17, 0x13, 0x01, 0x00, 0x00,
         0x00, 0x00,
     ])
-    tx = btc.core.Transaction.serialize_decode(data)
+    tx = yabtc.core.Transaction.serialize_decode(data)
     assert tx.serialize() == data
     assert tx.version == 1
     assert len(tx.vin) == 1
@@ -190,4 +192,4 @@ def test_transaction():
 def test_witness():
     for _ in range(256):
         wits = [random.randbytes(random.randint(0, 256)) for _ in range(random.randint(0, 256))]
-        assert btc.core.witness_decode(btc.core.witness_encode(wits)) == wits
+        assert yabtc.core.witness_decode(yabtc.core.witness_encode(wits)) == wits
