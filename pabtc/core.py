@@ -1,20 +1,20 @@
 import base64
-import btc.base58
-import btc.bech32
-import btc.config
-import btc.denomination
-import btc.ecdsa
-import btc.opcode
-import btc.ripemd160
-import btc.rpc
-import btc.schnorr
-import btc.secp256k1
 import hashlib
 import itertools
 import math
 import io
 import json
 import typing
+import pabtc.base58
+import pabtc.bech32
+import pabtc.config
+import pabtc.denomination
+import pabtc.ecdsa
+import pabtc.opcode
+import pabtc.ripemd160
+import pabtc.rpc
+import pabtc.schnorr
+import pabtc.secp256k1
 
 sighash_default = 0x00
 sighash_all = 0x01
@@ -24,7 +24,7 @@ sighash_anyone_can_pay = 0x80
 
 
 def hash160(data: bytearray) -> bytearray:
-    return bytearray(btc.ripemd160.ripemd160(hashlib.sha256(data).digest()).digest())
+    return bytearray(pabtc.ripemd160.ripemd160(hashlib.sha256(data).digest()).digest())
 
 
 def hash256(data: bytearray) -> bytearray:
@@ -32,7 +32,7 @@ def hash256(data: bytearray) -> bytearray:
 
 
 def hashtag(name: str, data: bytearray) -> bytearray:
-    return btc.schnorr.hash(name, data)
+    return pabtc.schnorr.hash(name, data)
 
 
 class PriKey:
@@ -51,18 +51,18 @@ class PriKey:
         }
 
     def pubkey(self):
-        pubkey = btc.secp256k1.G * btc.secp256k1.Fr(self.n)
+        pubkey = pabtc.secp256k1.G * pabtc.secp256k1.Fr(self.n)
         return PubKey(pubkey.x.x, pubkey.y.x)
 
-    def sign_ecdsa(self, data: bytearray) -> typing.Tuple[btc.secp256k1.Fr, btc.secp256k1.Fr, int]:
+    def sign_ecdsa(self, data: bytearray) -> typing.Tuple[pabtc.secp256k1.Fr, pabtc.secp256k1.Fr, int]:
         assert len(data) == 32
-        m = btc.secp256k1.Fr(int.from_bytes(data))
+        m = pabtc.secp256k1.Fr(int.from_bytes(data))
         for _ in itertools.repeat(0):
-            r, s, v = btc.ecdsa.sign(btc.secp256k1.Fr(self.n), m)
+            r, s, v = pabtc.ecdsa.sign(pabtc.secp256k1.Fr(self.n), m)
             # We require that the S value inside ECDSA signatures is at most the curve order divided by 2 (essentially
             # restricting this value to its lower half range).
             # See: https://github.com/bitcoin/bips/blob/master/bip-0146.mediawiki
-            if s.x * 2 >= btc.secp256k1.N:
+            if s.x * 2 >= pabtc.secp256k1.N:
                 s = -s
                 v ^= 1
             return r, s, v
@@ -74,24 +74,24 @@ class PriKey:
 
     def sign_schnorr(self, data: bytearray) -> bytearray:
         assert len(data) == 32
-        m = btc.secp256k1.Fr(int.from_bytes(data))
-        r, s = btc.schnorr.sign(btc.secp256k1.Fr(self.n), m)
+        m = pabtc.secp256k1.Fr(int.from_bytes(data))
+        r, s = pabtc.schnorr.sign(pabtc.secp256k1.Fr(self.n), m)
         return bytearray(r.x.x.to_bytes(32) + s.x.to_bytes(32))
 
     def wif(self) -> str:
         # See https://en.bitcoin.it/wiki/Wallet_import_format
         data = bytearray()
-        data.append(btc.config.current.prefix.wif)
+        data.append(pabtc.config.current.prefix.wif)
         data.extend(self.n.to_bytes(32))
         data.append(0x01)
         checksum = hash256(data)[:4]
         data.extend(checksum)
-        return btc.base58.encode(data)
+        return pabtc.base58.encode(data)
 
     @classmethod
     def wif_decode(cls, data: str) -> typing.Self:
-        data = btc.base58.decode(data)
-        assert data[0] == btc.config.current.prefix.wif
+        data = pabtc.base58.decode(data)
+        assert data[0] == pabtc.config.current.prefix.wif
         assert hash256(data[:-4])[:4] == data[-4:]
         return PriKey(int.from_bytes(data[1:33]))
 
@@ -99,7 +99,7 @@ class PriKey:
 class PubKey:
     def __init__(self, x: int, y: int) -> None:
         # The public key must be on the curve.
-        _ = btc.secp256k1.Pt(btc.secp256k1.Fq(x), btc.secp256k1.Fq(y))
+        _ = pabtc.secp256k1.Pt(pabtc.secp256k1.Fq(x), pabtc.secp256k1.Fq(y))
         self.x = x
         self.y = y
 
@@ -118,11 +118,11 @@ class PubKey:
             'y': f'0x{self.y:064x}'
         }
 
-    def pt(self) -> btc.secp256k1.Pt:
-        return btc.secp256k1.Pt(btc.secp256k1.Fq(self.x), btc.secp256k1.Fq(self.y))
+    def pt(self) -> pabtc.secp256k1.Pt:
+        return pabtc.secp256k1.Pt(pabtc.secp256k1.Fq(self.x), pabtc.secp256k1.Fq(self.y))
 
     @classmethod
-    def pt_decode(cls, data: btc.secp256k1.Pt) -> typing.Self:
+    def pt_decode(cls, data: pabtc.secp256k1.Pt) -> typing.Self:
         return PubKey(data.x.x, data.y.x)
 
     def sec(self) -> bytearray:
@@ -142,10 +142,10 @@ class PubKey:
         if p == 0x04:
             y = int.from_bytes(data[33:65])
         else:
-            y_x_y = x * x * x + btc.secp256k1.A.x * x + btc.secp256k1.B.x
-            y = pow(y_x_y, (btc.secp256k1.P + 1) // 4, btc.secp256k1.P)
+            y_x_y = x * x * x + pabtc.secp256k1.A.x * x + pabtc.secp256k1.B.x
+            y = pow(y_x_y, (pabtc.secp256k1.P + 1) // 4, pabtc.secp256k1.P)
             if y & 1 != p - 2:
-                y = -y % btc.secp256k1.P
+                y = -y % pabtc.secp256k1.P
         return PubKey(x, y)
 
 # Bitcoin address prefix: https://en.bitcoin.it/wiki/List_of_address_prefixes
@@ -154,27 +154,27 @@ class PubKey:
 def address_p2pkh(pubkey: PubKey) -> str:
     # Legacy
     pubkey_hash = hash160(pubkey.sec())
-    data = bytearray([btc.config.current.prefix.p2pkh]) + pubkey_hash
+    data = bytearray([pabtc.config.current.prefix.p2pkh]) + pubkey_hash
     chk4 = hash256(data)[:4]
-    return btc.base58.encode(data + chk4)
+    return pabtc.base58.encode(data + chk4)
 
 
 def address_p2sh(redeem: bytearray) -> str:
     # Pay to Script Hash.
     # See: https://github.com/bitcoin/bips/blob/master/bip-0016.mediawiki
     redeem_hash = hash160(redeem)
-    data = bytearray([btc.config.current.prefix.p2sh]) + redeem_hash
+    data = bytearray([pabtc.config.current.prefix.p2sh]) + redeem_hash
     chk4 = hash256(data)[:4]
-    return btc.base58.encode(data + chk4)
+    return pabtc.base58.encode(data + chk4)
 
 
 def address_p2sh_p2ms(n: int, pubkey: typing.List[PubKey]) -> str:
     redeem_script = []
-    redeem_script.append(btc.opcode.op_n(n))
+    redeem_script.append(pabtc.opcode.op_n(n))
     for e in pubkey:
-        redeem_script.append(btc.opcode.op_pushdata(e.sec()))
-    redeem_script.append(btc.opcode.op_n(len(pubkey)))
-    redeem_script.append(btc.opcode.op_checkmultisig)
+        redeem_script.append(pabtc.opcode.op_pushdata(e.sec()))
+    redeem_script.append(pabtc.opcode.op_n(len(pubkey)))
+    redeem_script.append(pabtc.opcode.op_checkmultisig)
     redeem_script = script(redeem_script)
     return address_p2sh(redeem_script)
 
@@ -183,7 +183,7 @@ def address_p2sh_p2wpkh(pubkey: PubKey) -> str:
     # Nested Segwit.
     # See https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki
     pubkey_hash = hash160(pubkey.sec())
-    redeem_script = script([btc.opcode.op_0, btc.opcode.op_pushdata(pubkey_hash)])
+    redeem_script = script([pabtc.opcode.op_0, pabtc.opcode.op_pushdata(pubkey_hash)])
     return address_p2sh(redeem_script)
 
 
@@ -191,7 +191,7 @@ def address_p2wpkh(pubkey: PubKey) -> str:
     # Native SegWit.
     # See https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki
     pubkey_hash = hash160(pubkey.sec())
-    return btc.bech32.encode(btc.config.current.prefix.bech32, 0, pubkey_hash)
+    return pabtc.bech32.encode(pabtc.config.current.prefix.bech32, 0, pubkey_hash)
 
 
 def address_p2tr(pubkey: PubKey, root: bytearray) -> str:
@@ -204,10 +204,10 @@ def address_p2tr(pubkey: PubKey, root: bytearray) -> str:
     # There is no script path if root is empty.
     assert len(root) in [0x00, 0x20]
     adjust_prikey_byte = hashtag('TapTweak', bytearray(origin_pubkey.x.x.to_bytes(32)) + root)
-    adjust_prikey = btc.secp256k1.Fr(int.from_bytes(adjust_prikey_byte))
-    adjust_pubkey = btc.secp256k1.G * adjust_prikey
+    adjust_prikey = pabtc.secp256k1.Fr(int.from_bytes(adjust_prikey_byte))
+    adjust_pubkey = pabtc.secp256k1.G * adjust_prikey
     output_pubkey = origin_pubkey + adjust_pubkey
-    return btc.bech32.encode(btc.config.current.prefix.bech32, 1, bytearray(output_pubkey.x.x.to_bytes(32)))
+    return pabtc.bech32.encode(pabtc.config.current.prefix.bech32, 1, bytearray(output_pubkey.x.x.to_bytes(32)))
 
 
 def compact_size_encode(n: int) -> bytearray:
@@ -316,9 +316,9 @@ class OutPoint:
         }
 
     def load(self):
-        rpcret = btc.rpc.get_tx_out(self.txid[::-1].hex(), self.vout)
+        rpcret = pabtc.rpc.get_tx_out(self.txid[::-1].hex(), self.vout)
         script_pubkey = bytearray.fromhex(rpcret['scriptPubKey']['hex'])
-        amount = rpcret['value'] * btc.denomination.bitcoin
+        amount = rpcret['value'] * pabtc.denomination.bitcoin
         amount = int(amount.to_integral_exact())
         return TxOut(amount, script_pubkey)
 
@@ -692,56 +692,56 @@ class Transaction:
 
 
 def script_pubkey_p2pkh(addr: str) -> bytearray:
-    data = btc.base58.decode(addr)
-    assert data[0] == btc.config.current.prefix.p2pkh
+    data = pabtc.base58.decode(addr)
+    assert data[0] == pabtc.config.current.prefix.p2pkh
     hash = data[0x01:0x15]
-    assert btc.core.hash256(data[0x00:0x15])[:4] == data[0x15:0x19]
+    assert pabtc.core.hash256(data[0x00:0x15])[:4] == data[0x15:0x19]
     return script([
-        btc.opcode.op_dup,
-        btc.opcode.op_hash160,
-        btc.opcode.op_pushdata(hash),
-        btc.opcode.op_equalverify,
-        btc.opcode.op_checksig,
+        pabtc.opcode.op_dup,
+        pabtc.opcode.op_hash160,
+        pabtc.opcode.op_pushdata(hash),
+        pabtc.opcode.op_equalverify,
+        pabtc.opcode.op_checksig,
     ])
 
 
 def script_pubkey_p2sh(addr: str) -> bytearray:
-    data = btc.base58.decode(addr)
-    assert data[0] == btc.config.current.prefix.p2sh
+    data = pabtc.base58.decode(addr)
+    assert data[0] == pabtc.config.current.prefix.p2sh
     hash = data[0x01:0x15]
-    assert btc.core.hash256(data[0x00:0x15])[:4] == data[0x15:0x19]
+    assert pabtc.core.hash256(data[0x00:0x15])[:4] == data[0x15:0x19]
     return script([
-        btc.opcode.op_hash160,
-        btc.opcode.op_pushdata(hash),
-        btc.opcode.op_equal,
+        pabtc.opcode.op_hash160,
+        pabtc.opcode.op_pushdata(hash),
+        pabtc.opcode.op_equal,
     ])
 
 
 def script_pubkey_p2wpkh(addr: str) -> bytearray:
-    hash = btc.bech32.decode(btc.config.current.prefix.bech32, 0, addr)
+    hash = pabtc.bech32.decode(pabtc.config.current.prefix.bech32, 0, addr)
     return script([
-        btc.opcode.op_0,
-        btc.opcode.op_pushdata(hash),
+        pabtc.opcode.op_0,
+        pabtc.opcode.op_pushdata(hash),
     ])
 
 
 def script_pubkey_p2tr(addr: str) -> bytearray:
-    pubx = btc.bech32.decode(btc.config.current.prefix.bech32, 1, addr)
+    pubx = pabtc.bech32.decode(pabtc.config.current.prefix.bech32, 1, addr)
     return script([
-        btc.opcode.op_1,
-        btc.opcode.op_pushdata(pubx),
+        pabtc.opcode.op_1,
+        pabtc.opcode.op_pushdata(pubx),
     ])
 
 
 def script_pubkey(addr: str) -> bytearray:
-    if addr.startswith(btc.config.current.prefix.bech32):
-        if addr[len(btc.config.current.prefix.bech32) + 1] == 'q':
+    if addr.startswith(pabtc.config.current.prefix.bech32):
+        if addr[len(pabtc.config.current.prefix.bech32) + 1] == 'q':
             return script_pubkey_p2wpkh(addr)
-        if addr[len(btc.config.current.prefix.bech32) + 1] == 'p':
+        if addr[len(pabtc.config.current.prefix.bech32) + 1] == 'p':
             return script_pubkey_p2tr(addr)
-    if btc.base58.decode(addr)[0] == btc.config.current.prefix.p2pkh:
+    if pabtc.base58.decode(addr)[0] == pabtc.config.current.prefix.p2pkh:
         return script_pubkey_p2pkh(addr)
-    if btc.base58.decode(addr)[0] == btc.config.current.prefix.p2sh:
+    if pabtc.base58.decode(addr)[0] == pabtc.config.current.prefix.p2sh:
         return script_pubkey_p2sh(addr)
     raise Exception
 
@@ -756,7 +756,7 @@ def script(i: typing.List[int | bytearray]) -> bytearray:
     return r
 
 
-def der_encode(r: btc.secp256k1.Fr, s: btc.secp256k1.Fr) -> bytearray:
+def der_encode(r: pabtc.secp256k1.Fr, s: pabtc.secp256k1.Fr) -> bytearray:
     # DER encoding: https://github.com/bitcoin/bips/blob/master/bip-0062.mediawiki#der-encoding
     body = bytearray()
     body.append(0x02)
@@ -775,17 +775,17 @@ def der_encode(r: btc.secp256k1.Fr, s: btc.secp256k1.Fr) -> bytearray:
     return head + body
 
 
-def der_decode(sign: bytearray) -> typing.Tuple[btc.secp256k1.Fr, btc.secp256k1.Fr]:
+def der_decode(sign: bytearray) -> typing.Tuple[pabtc.secp256k1.Fr, pabtc.secp256k1.Fr]:
     assert sign[0] == 0x30
     assert sign[1] == len(sign) - 2
     assert sign[2] == 0x02
     rlen = sign[3]
-    r = btc.secp256k1.Fr(int.from_bytes(sign[4:4+rlen]))
+    r = pabtc.secp256k1.Fr(int.from_bytes(sign[4:4+rlen]))
     f = 4 + rlen
     assert sign[f] == 0x02
     slen = sign[f+1]
     f = f + 2
-    s = btc.secp256k1.Fr(int.from_bytes(sign[f:f+slen]))
+    s = pabtc.secp256k1.Fr(int.from_bytes(sign[f:f+slen]))
     return r, s
 
 
@@ -816,11 +816,11 @@ class Message:
     def hash(self) -> bytearray:
         b = bytearray()
         # Text used to signify that a signed message follows and to prevent inadvertently signing a transaction.
-        b.extend(btc.core.compact_size_encode(24))
+        b.extend(pabtc.core.compact_size_encode(24))
         b.extend(bytearray('Bitcoin Signed Message:\n'.encode()))
-        b.extend(btc.core.compact_size_encode(len(self.data)))
+        b.extend(pabtc.core.compact_size_encode(len(self.data)))
         b.extend(bytearray(self.data.encode()))
-        return btc.core.hash256(b)
+        return pabtc.core.hash256(b)
 
     def sign(self, prikey: PriKey) -> str:
         r, s, v = prikey.sign_ecdsa(self.hash())
@@ -834,13 +834,13 @@ class Message:
         return base64.b64encode(sig).decode()
 
     def pubkey(self, sig: str) -> PubKey:
-        m = btc.secp256k1.Fr(int.from_bytes(self.hash()))
+        m = pabtc.secp256k1.Fr(int.from_bytes(self.hash()))
         sig = base64.b64decode(sig)
         assert sig[0] >= 27
         v = (sig[0] - 27) & 3
-        r = btc.secp256k1.Fr(int.from_bytes(sig[0x01:0x21]))
-        s = btc.secp256k1.Fr(int.from_bytes(sig[0x21:0x41]))
-        return PubKey.pt_decode(btc.ecdsa.pubkey(m, r, s, v))
+        r = pabtc.secp256k1.Fr(int.from_bytes(sig[0x01:0x21]))
+        s = pabtc.secp256k1.Fr(int.from_bytes(sig[0x21:0x41]))
+        return PubKey.pt_decode(pabtc.ecdsa.pubkey(m, r, s, v))
 
 
 class TapLeaf:

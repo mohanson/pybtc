@@ -1,21 +1,25 @@
-# Python SDK for BTC
+# Pabtc: Bitcoin Library For Humans
 
-Python BTC is an experimental project that aims to provide human-friendly interfaces for common BTC operations. Note that Python BTC is not a complete SDK, but only implements the BTC functions that I am interested in.
+Pabtc is a project that aims to provide human-friendly interfaces for common btc operations. Using pabtc, you can easily and happily complete everything you want to do on btc.
 
 Features:
 
-- No third-party dependencies. All code is visible.
-- Incredibly simple.
+- No third-party dependencies, everything is visible.
+- Incredibly simple, even a cat knows how to use it.
 
 ## Installation
 
 ```sh
-$ git clone https://github.com/mohanson/pybtc
-$ cd pybtc
+$ pip install pabtc
+# or
+$ git clone https://github.com/mohanson/pabtc
+$ cd pabtc
 $ python -m pip install --editable .
 ```
 
 ## Usage
+
+By default, pabtc is configured on the develop. To switch networks, use `pabtc.config.current = pabtc.config.mainnet`.
 
 **example/addr.py**
 

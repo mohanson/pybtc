@@ -1,9 +1,9 @@
-import btc
+import pabtc
 
-pub1 = btc.core.PriKey(1).pubkey()
-pub2 = btc.core.PriKey(2).pubkey()
+pub1 = pabtc.core.PriKey(1).pubkey()
+pub2 = pabtc.core.PriKey(2).pubkey()
 
-btc.rpc.call('createwallet', ['main', True, True, None, None, None, True])
+pabtc.rpc.call('createwallet', ['main', True, True, None, None, None, True])
 for d in [
     f'pkh({pub1.sec().hex()})',
     f'pkh({pub2.sec().hex()})',
@@ -16,14 +16,14 @@ for d in [
     f'tr({pub1.sec().hex()})',
     f'tr({pub2.sec().hex()})',
 ]:
-    d = btc.rpc.get_descriptor_info(d)['descriptor']
-    btc.rpc.import_descriptors([{
+    d = pabtc.rpc.get_descriptor_info(d)['descriptor']
+    pabtc.rpc.import_descriptors([{
         'desc': d,
         'timestamp': 0,
     }])
-btc.rpc.generate_to_address(10, btc.core.address_p2pkh(pub1))
-btc.rpc.generate_to_address(10, btc.core.address_p2sh_p2ms(2, [pub1, pub2]))
-btc.rpc.generate_to_address(10, btc.core.address_p2sh_p2wpkh(pub1))
-btc.rpc.generate_to_address(10, btc.core.address_p2wpkh(pub1))
-btc.rpc.generate_to_address(10, btc.core.address_p2tr(pub1, bytearray()))
-btc.rpc.generate_to_address(99, btc.core.address_p2pkh(pub1))
+pabtc.rpc.generate_to_address(10, pabtc.core.address_p2pkh(pub1))
+pabtc.rpc.generate_to_address(10, pabtc.core.address_p2sh_p2ms(2, [pub1, pub2]))
+pabtc.rpc.generate_to_address(10, pabtc.core.address_p2sh_p2wpkh(pub1))
+pabtc.rpc.generate_to_address(10, pabtc.core.address_p2wpkh(pub1))
+pabtc.rpc.generate_to_address(10, pabtc.core.address_p2tr(pub1, bytearray()))
+pabtc.rpc.generate_to_address(99, pabtc.core.address_p2pkh(pub1))

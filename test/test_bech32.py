@@ -1,5 +1,5 @@
-import btc
 import pytest
+import pabtc
 
 
 def test_bech32():
@@ -13,8 +13,8 @@ def test_bech32():
         'split1checkupstagehandshakeupstreamerranterredcaperred2y9e3w',
         '?1ezyfcl',
     ]:
-        hrp, data = btc.bech32.bech32_decode(0, s)
-        assert btc.bech32.bech32_encode(hrp, 0, data) == s.lower()
+        hrp, data = pabtc.bech32.bech32_decode(0, s)
+        assert pabtc.bech32.bech32_encode(hrp, 0, data) == s.lower()
     for s in [
         '\x20' + '1nwldj5',
         '\x7F' + '1axkwrx',
@@ -30,7 +30,7 @@ def test_bech32():
         '1qzzfhee',
     ]:
         with pytest.raises(AssertionError):
-            btc.bech32.bech32_decode(0, s)
+            pabtc.bech32.bech32_decode(0, s)
 
 
 def test_bech32m():
@@ -44,8 +44,8 @@ def test_bech32m():
         'split1checkupstagehandshakeupstreamerranterredcaperredlc445v',
         '?1v759aa',
     ]:
-        hrp, data = btc.bech32.bech32_decode(1, s)
-        assert btc.bech32.bech32_encode(hrp, 1, data) == s.lower()
+        hrp, data = pabtc.bech32.bech32_decode(1, s)
+        assert pabtc.bech32.bech32_encode(hrp, 1, data) == s.lower()
     for s in [
         '\x20' + '1xj0phk',
         '\x7F' + '1g6xzxy',
@@ -63,4 +63,4 @@ def test_bech32m():
         '1p2gdwpf',
     ]:
         with pytest.raises(AssertionError):
-            btc.bech32.bech32_decode(1, s)
+            pabtc.bech32.bech32_decode(1, s)

@@ -1,17 +1,16 @@
-import btc.core
-import btc.denomination
-import btc.opcode
-import btc.rpc
-import btc.schnorr
-import btc.secp256k1
 import json
 import requests
 import typing
-
+import pabtc.core
+import pabtc.denomination
+import pabtc.opcode
+import pabtc.rpc
+import pabtc.schnorr
+import pabtc.secp256k1
 
 class Analyzer:
     # Analyzer is a simple transaction analyzer to reject transactions that are obviously wrong.
-    def __init__(self, tx: btc.core.Transaction) -> None:
+    def __init__(self, tx: pabtc.core.Transaction) -> None:
         self.tx = tx
 
     def analyze_mining_fee(self) -> None:
@@ -32,7 +31,7 @@ class Analyzer:
 
 
 class Utxo:
-    def __init__(self, out_point: btc.core.OutPoint, out: btc.core.TxOut) -> None:
+    def __init__(self, out_point: pabtc.core.OutPoint, out: pabtc.core.TxOut) -> None:
         self.out_point = out_point
         self.out = out
 
@@ -60,12 +59,12 @@ class SearcherCore:
 
     def unspent(self, addr: str) -> typing.List[Utxo]:
         r = []
-        for e in btc.rpc.list_unspent([addr]):
-            out_point = btc.core.OutPoint(bytearray.fromhex(e['txid'])[::-1], e['vout'])
+        for e in pabtc.rpc.list_unspent([addr]):
+            out_point = pabtc.core.OutPoint(bytearray.fromhex(e['txid'])[::-1], e['vout'])
             script_pubkey = bytearray.fromhex(e['scriptPubKey'])
-            amount = e['amount'] * btc.denomination.bitcoin
+            amount = e['amount'] * pabtc.denomination.bitcoin
             amount = int(amount.to_integral_exact())
-            utxo = Utxo(out_point, btc.core.TxOut(amount, script_pubkey))
+            utxo = Utxo(out_point, pabtc.core.TxOut(amount, script_pubkey))
             r.append(utxo)
         return r
 
@@ -87,11 +86,11 @@ class SearcherMempoolSpace:
     def unspent(self, addr: str) -> typing.List[Utxo]:
         r = []
         for e in requests.get(self.get_url(addr)).json():
-            out_point = btc.core.OutPoint(bytearray.fromhex(e['txid'])[::-1], e['vout'])
+            out_point = pabtc.core.OutPoint(bytearray.fromhex(e['txid'])[::-1], e['vout'])
             # Mempool's api does not provide script_pubkey, so we have to infer it from the address.
-            script_pubkey = btc.core.script_pubkey(addr)
+            script_pubkey = pabtc.core.script_pubkey(addr)
             amount = e['value']
-            utxo = Utxo(out_point, btc.core.TxOut(amount, script_pubkey))
+            utxo = Utxo(out_point, pabtc.core.TxOut(amount, script_pubkey))
             r.append(utxo)
         return r
 
@@ -102,21 +101,21 @@ class Searcher:
         pass
 
     def unspent(self, addr: str) -> typing.List[Utxo]:
-        if btc.config.current == btc.config.develop:
+        if pabtc.config.current == pabtc.config.develop:
             return SearcherCore().unspent(addr)
-        if btc.config.current == btc.config.mainnet:
+        if pabtc.config.current == pabtc.config.mainnet:
             return SearcherMempoolSpace('mainnet').unspent(addr)
-        if btc.config.current == btc.config.testnet:
+        if pabtc.config.current == pabtc.config.testnet:
             return SearcherMempoolSpace('testnet').unspent(addr)
         raise Exception
 
 
 class Tp2pkh:
     def __init__(self, prikey: int) -> None:
-        self.prikey = btc.core.PriKey(prikey)
+        self.prikey = pabtc.core.PriKey(prikey)
         self.pubkey = self.prikey.pubkey()
-        self.addr = btc.core.address_p2pkh(self.pubkey)
-        self.script = btc.core.script_pubkey_p2pkh(self.addr)
+        self.addr = pabtc.core.address_p2pkh(self.pubkey)
+        self.script = pabtc.core.script_pubkey_p2pkh(self.addr)
 
     def __repr__(self) -> str:
         return json.dumps(self.json())
@@ -129,33 +128,33 @@ class Tp2pkh:
             'script': self.script.hex(),
         }
 
-    def sign(self, tx: btc.core.Transaction) -> None:
+    def sign(self, tx: pabtc.core.Transaction) -> None:
         for i, e in enumerate(tx.vin):
-            s = self.prikey.sign_ecdsa_der(tx.digest_legacy(i, btc.core.sighash_all, e.out_point.load().script_pubkey))
-            s.append(btc.core.sighash_all)
-            e.script_sig = btc.core.script([
-                btc.opcode.op_pushdata(s),
-                btc.opcode.op_pushdata(self.pubkey.sec())
+            s = self.prikey.sign_ecdsa_der(tx.digest_legacy(i, pabtc.core.sighash_all, e.out_point.load().script_pubkey))
+            s.append(pabtc.core.sighash_all)
+            e.script_sig = pabtc.core.script([
+                pabtc.opcode.op_pushdata(s),
+                pabtc.opcode.op_pushdata(self.pubkey.sec())
             ])
 
-    def txin(self, op: btc.core.OutPoint) -> btc.core.TxIn:
-        return btc.core.TxIn(op, bytearray(107), 0xffffffff, [])
+    def txin(self, op: pabtc.core.OutPoint) -> pabtc.core.TxIn:
+        return pabtc.core.TxIn(op, bytearray(107), 0xffffffff, [])
 
 
 class Tp2shp2ms:
     # Multi-signature: See https://en.bitcoin.it/wiki/Multi-signature.
-    def __init__(self, pubkey: typing.List[btc.core.PubKey], prikey: typing.List[int]) -> None:
-        self.prikey = [btc.core.PriKey(e) for e in prikey]
+    def __init__(self, pubkey: typing.List[pabtc.core.PubKey], prikey: typing.List[int]) -> None:
+        self.prikey = [pabtc.core.PriKey(e) for e in prikey]
         self.pubkey = pubkey
         script_asts = []
-        script_asts.append(btc.opcode.op_n(len(prikey)))
+        script_asts.append(pabtc.opcode.op_n(len(prikey)))
         for e in self.pubkey:
-            script_asts.append(btc.opcode.op_pushdata(e.sec()))
-        script_asts.append(btc.opcode.op_n(len(pubkey)))
-        script_asts.append(btc.opcode.op_checkmultisig)
-        self.redeem = btc.core.script(script_asts)
-        self.addr = btc.core.address_p2sh(self.redeem)
-        self.script = btc.core.script_pubkey_p2sh(self.addr)
+            script_asts.append(pabtc.opcode.op_pushdata(e.sec()))
+        script_asts.append(pabtc.opcode.op_n(len(pubkey)))
+        script_asts.append(pabtc.opcode.op_checkmultisig)
+        self.redeem = pabtc.core.script(script_asts)
+        self.addr = pabtc.core.address_p2sh(self.redeem)
+        self.script = pabtc.core.script_pubkey_p2sh(self.addr)
 
     def __repr__(self) -> str:
         return json.dumps(self.json())
@@ -168,32 +167,32 @@ class Tp2shp2ms:
             'script': self.script.hex(),
         }
 
-    def sign(self, tx: btc.core.Transaction) -> None:
+    def sign(self, tx: pabtc.core.Transaction) -> None:
         for i, e in enumerate(tx.vin):
             script_sig = []
-            script_sig.append(btc.opcode.op_0)
+            script_sig.append(pabtc.opcode.op_0)
             for prikey in self.prikey:
-                s = prikey.sign_ecdsa_der(tx.digest_legacy(i, btc.core.sighash_all, self.redeem))
-                s.append(btc.core.sighash_all)
-                script_sig.append(btc.opcode.op_pushdata(s))
-            script_sig.append(btc.opcode.op_pushdata(self.redeem))
-            e.script_sig = btc.core.script(script_sig)
+                s = prikey.sign_ecdsa_der(tx.digest_legacy(i, pabtc.core.sighash_all, self.redeem))
+                s.append(pabtc.core.sighash_all)
+                script_sig.append(pabtc.opcode.op_pushdata(s))
+            script_sig.append(pabtc.opcode.op_pushdata(self.redeem))
+            e.script_sig = pabtc.core.script(script_sig)
 
-    def txin(self, op: btc.core.OutPoint) -> btc.core.TxIn:
+    def txin(self, op: pabtc.core.OutPoint) -> pabtc.core.TxIn:
         script_sig = []
-        script_sig.append(btc.opcode.op_0)
+        script_sig.append(pabtc.opcode.op_0)
         for _ in range(len(self.prikey)):
-            script_sig.append(btc.opcode.op_pushdata(bytearray(72)))
-        script_sig.append(btc.opcode.op_pushdata(self.redeem))
-        return btc.core.TxIn(op, btc.core.script(script_sig), 0xffffffff, [])
+            script_sig.append(pabtc.opcode.op_pushdata(bytearray(72)))
+        script_sig.append(pabtc.opcode.op_pushdata(self.redeem))
+        return pabtc.core.TxIn(op, pabtc.core.script(script_sig), 0xffffffff, [])
 
 
 class Tp2shp2wpkh:
     def __init__(self, prikey: int) -> None:
-        self.prikey = btc.core.PriKey(prikey)
+        self.prikey = pabtc.core.PriKey(prikey)
         self.pubkey = self.prikey.pubkey()
-        self.addr = btc.core.address_p2sh_p2wpkh(self.pubkey)
-        self.script = btc.core.script_pubkey_p2sh(self.addr)
+        self.addr = pabtc.core.address_p2sh_p2wpkh(self.pubkey)
+        self.script = pabtc.core.script_pubkey_p2sh(self.addr)
 
     def __repr__(self) -> str:
         return json.dumps(self.json())
@@ -206,38 +205,38 @@ class Tp2shp2wpkh:
             'script': self.script.hex(),
         }
 
-    def sign(self, tx: btc.core.Transaction) -> None:
+    def sign(self, tx: pabtc.core.Transaction) -> None:
         # See: https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#p2wpkh-nested-in-bip16-p2sh
-        pubkey_hash = btc.core.hash160(self.pubkey.sec())
-        script_code = btc.core.script([
-            btc.opcode.op_pushdata(btc.core.script([
-                btc.opcode.op_dup,
-                btc.opcode.op_hash160,
-                btc.opcode.op_pushdata(pubkey_hash),
-                btc.opcode.op_equalverify,
-                btc.opcode.op_checksig,
+        pubkey_hash = pabtc.core.hash160(self.pubkey.sec())
+        script_code = pabtc.core.script([
+            pabtc.opcode.op_pushdata(pabtc.core.script([
+                pabtc.opcode.op_dup,
+                pabtc.opcode.op_hash160,
+                pabtc.opcode.op_pushdata(pubkey_hash),
+                pabtc.opcode.op_equalverify,
+                pabtc.opcode.op_checksig,
             ]))])
-        script_sig = btc.core.script([btc.opcode.op_pushdata(btc.core.script([
-            btc.opcode.op_0,
-            btc.opcode.op_pushdata(pubkey_hash)
+        script_sig = pabtc.core.script([pabtc.opcode.op_pushdata(pabtc.core.script([
+            pabtc.opcode.op_0,
+            pabtc.opcode.op_pushdata(pubkey_hash)
         ]))])
         for i, e in enumerate(tx.vin):
             e.script_sig = script_sig
-            s = self.prikey.sign_ecdsa_der(tx.digest_segwit_v0(i, btc.core.sighash_all, script_code))
-            s.append(btc.core.sighash_all)
+            s = self.prikey.sign_ecdsa_der(tx.digest_segwit_v0(i, pabtc.core.sighash_all, script_code))
+            s.append(pabtc.core.sighash_all)
             e.witness[0] = s
             e.witness[1] = self.pubkey.sec()
 
-    def txin(self, op: btc.core.OutPoint) -> btc.core.TxIn:
-        return btc.core.TxIn(op, bytearray(23), 0xffffffff, [bytearray(72), bytearray(33)])
+    def txin(self, op: pabtc.core.OutPoint) -> pabtc.core.TxIn:
+        return pabtc.core.TxIn(op, bytearray(23), 0xffffffff, [bytearray(72), bytearray(33)])
 
 
 class Tp2wpkh:
     def __init__(self, prikey: int) -> None:
-        self.prikey = btc.core.PriKey(prikey)
+        self.prikey = pabtc.core.PriKey(prikey)
         self.pubkey = self.prikey.pubkey()
-        self.addr = btc.core.address_p2wpkh(self.pubkey)
-        self.script = btc.core.script_pubkey_p2wpkh(self.addr)
+        self.addr = pabtc.core.address_p2wpkh(self.pubkey)
+        self.script = pabtc.core.script_pubkey_p2wpkh(self.addr)
 
     def __repr__(self) -> str:
         return json.dumps(self.json())
@@ -250,34 +249,34 @@ class Tp2wpkh:
             'script': self.script.hex(),
         }
 
-    def sign(self, tx: btc.core.Transaction) -> None:
+    def sign(self, tx: pabtc.core.Transaction) -> None:
         # See: https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#p2wpkh
-        pubkey_hash = btc.core.hash160(self.pubkey.sec())
-        script_code = btc.core.script([
-            btc.opcode.op_pushdata(btc.core.script([
-                btc.opcode.op_dup,
-                btc.opcode.op_hash160,
-                btc.opcode.op_pushdata(pubkey_hash),
-                btc.opcode.op_equalverify,
-                btc.opcode.op_checksig,
+        pubkey_hash = pabtc.core.hash160(self.pubkey.sec())
+        script_code = pabtc.core.script([
+            pabtc.opcode.op_pushdata(pabtc.core.script([
+                pabtc.opcode.op_dup,
+                pabtc.opcode.op_hash160,
+                pabtc.opcode.op_pushdata(pubkey_hash),
+                pabtc.opcode.op_equalverify,
+                pabtc.opcode.op_checksig,
             ]))])
         for i, e in enumerate(tx.vin):
-            s = self.prikey.sign_ecdsa_der(tx.digest_segwit_v0(i, btc.core.sighash_all, script_code))
-            s.append(btc.core.sighash_all)
+            s = self.prikey.sign_ecdsa_der(tx.digest_segwit_v0(i, pabtc.core.sighash_all, script_code))
+            s.append(pabtc.core.sighash_all)
             e.witness[0] = s
             e.witness[1] = self.pubkey.sec()
 
-    def txin(self, op: btc.core.OutPoint) -> btc.core.TxIn:
-        return btc.core.TxIn(op, bytearray(), 0xffffffff, [bytearray(72), bytearray(33)])
+    def txin(self, op: pabtc.core.OutPoint) -> pabtc.core.TxIn:
+        return pabtc.core.TxIn(op, bytearray(), 0xffffffff, [bytearray(72), bytearray(33)])
 
 
 class Tp2tr:
     def __init__(self, prikey: int, root: bytearray) -> None:
-        self.prikey = btc.core.PriKey(prikey)
+        self.prikey = pabtc.core.PriKey(prikey)
         self.pubkey = self.prikey.pubkey()
-        self.addr = btc.core.address_p2tr(self.pubkey, root)
+        self.addr = pabtc.core.address_p2tr(self.pubkey, root)
         self.root = root
-        self.script = btc.core.script_pubkey_p2tr(self.addr)
+        self.script = pabtc.core.script_pubkey_p2tr(self.addr)
 
     def __repr__(self) -> str:
         return json.dumps(self.json())
@@ -291,21 +290,21 @@ class Tp2tr:
             'script': self.script.hex(),
         }
 
-    def sign(self, tx: btc.core.Transaction) -> None:
+    def sign(self, tx: pabtc.core.Transaction) -> None:
         # See: https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki
-        prikey = btc.secp256k1.Fr(self.prikey.n)
-        adjust_prikey_byte = btc.core.hashtag('TapTweak', bytearray(self.pubkey.x.to_bytes(32)) + self.root)
-        adjust_prikey = btc.secp256k1.Fr(int.from_bytes(adjust_prikey_byte))
+        prikey = pabtc.secp256k1.Fr(self.prikey.n)
+        adjust_prikey_byte = pabtc.core.hashtag('TapTweak', bytearray(self.pubkey.x.to_bytes(32)) + self.root)
+        adjust_prikey = pabtc.secp256k1.Fr(int.from_bytes(adjust_prikey_byte))
         output_prikey = prikey + adjust_prikey
-        output_prikey = btc.core.PriKey(output_prikey.x)
+        output_prikey = pabtc.core.PriKey(output_prikey.x)
         for i, e in enumerate(tx.vin):
-            m = tx.digest_segwit_v1(i, btc.core.sighash_all, bytearray())
-            s = output_prikey.sign_schnorr(m) + bytearray([btc.core.sighash_all])
+            m = tx.digest_segwit_v1(i, pabtc.core.sighash_all, bytearray())
+            s = output_prikey.sign_schnorr(m) + bytearray([pabtc.core.sighash_all])
             e.witness[0] = s
         return tx
 
-    def txin(self, op: btc.core.OutPoint) -> btc.core.TxIn:
-        return btc.core.TxIn(op, bytearray(), 0xffffffff, [bytearray(65)])
+    def txin(self, op: pabtc.core.OutPoint) -> pabtc.core.TxIn:
+        return pabtc.core.TxIn(op, bytearray(), 0xffffffff, [bytearray(65)])
 
 
 T = Tp2pkh | Tp2shp2ms | Tp2shp2wpkh | Tp2wpkh | Tp2tr
@@ -333,11 +332,11 @@ class Wallet:
         accept_script = script
         change_value = 0
         change_script = self.script
-        fr = btc.rpc.estimates_mart_fee(6)['feerate'] * btc.denomination.bitcoin
+        fr = pabtc.rpc.estimates_mart_fee(6)['feerate'] * pabtc.denomination.bitcoin
         fr = int(fr.to_integral_exact()) // 1000
-        tx = btc.core.Transaction(2, [], [], 0)
-        tx.vout.append(btc.core.TxOut(accept_value, accept_script))
-        tx.vout.append(btc.core.TxOut(change_value, change_script))
+        tx = pabtc.core.Transaction(2, [], [], 0)
+        tx.vout.append(pabtc.core.TxOut(accept_value, accept_script))
+        tx.vout.append(pabtc.core.TxOut(change_value, change_script))
         for utxo in self.unspent():
             txin = self.signer.txin(utxo.out_point)
             tx.vin.append(txin)
@@ -351,17 +350,17 @@ class Wallet:
         tx.vout[1].value = change_value
         self.signer.sign(tx)
         Analyzer(tx).analyze()
-        txid = bytearray.fromhex(btc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
+        txid = bytearray.fromhex(pabtc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
         return txid
 
     def transfer_all(self, script: bytearray) -> bytearray:
         sender_value = 0
         accept_value = 0
         accept_script = script
-        fr = btc.rpc.estimates_mart_fee(6)['feerate'] * btc.denomination.bitcoin
+        fr = pabtc.rpc.estimates_mart_fee(6)['feerate'] * pabtc.denomination.bitcoin
         fr = int(fr.to_integral_exact()) // 1000
-        tx = btc.core.Transaction(2, [], [], 0)
-        tx.vout.append(btc.core.TxOut(accept_value, accept_script))
+        tx = pabtc.core.Transaction(2, [], [], 0)
+        tx.vout.append(pabtc.core.TxOut(accept_value, accept_script))
         for utxo in self.unspent():
             txin = self.signer.txin(utxo.out_point)
             tx.vin.append(txin)
@@ -371,7 +370,7 @@ class Wallet:
         tx.vout[0].value = accept_value
         self.signer.sign(tx)
         Analyzer(tx).analyze()
-        txid = bytearray.fromhex(btc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
+        txid = bytearray.fromhex(pabtc.rpc.send_raw_transaction(tx.serialize().hex()))[::-1]
         return txid
 
     def unspent(self) -> typing.List[Utxo]:
