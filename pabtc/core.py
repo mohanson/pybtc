@@ -47,6 +47,15 @@ class PriKey:
     def __eq__(self, other) -> bool:
         return self.n == other.n
 
+    def hex(self) -> str:
+        # Convert the private key to hex representation.
+        return self.n.to_bytes(32).hex()
+
+    @classmethod
+    def hex_decode(cls, data: str) -> typing.Self:
+        # Convert the hex representation to private key.
+        return PriKey(int.from_bytes(bytearray.fromhex(data)))
+
     def json(self) -> typing.Dict:
         # Convert the private key to json representation.
         return {
@@ -140,7 +149,8 @@ class PubKey:
         return PubKey(data.x.x, data.y.x)
 
     def sec(self) -> bytearray:
-        # Convert the public key to standards for efficient cryptography representation.
+        # Convert the public key to standards for efficient cryptography representation. Elsewhere, it is referred to
+        # as the compressed format of the public key.
         r = bytearray()
         if self.y & 1 == 0:
             r.append(0x02)
