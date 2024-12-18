@@ -36,6 +36,8 @@ def hashtag(name: str, data: bytearray) -> bytearray:
 
 
 class PriKey:
+    # Bitcoin private key is an integer between 0 and n, where n is slightly smaller than 2**256.
+
     def __init__(self, n: int) -> None:
         self.n = n
 
@@ -46,15 +48,18 @@ class PriKey:
         return self.n == other.n
 
     def json(self) -> typing.Dict:
+        # Convert the private key to json representation.
         return {
             'n': f'0x{self.n:064x}',
         }
 
     def pubkey(self):
+        # Get the ecdsa public key corresponding to the private key.
         pubkey = pabtc.secp256k1.G * pabtc.secp256k1.Fr(self.n)
         return PubKey(pubkey.x.x, pubkey.y.x)
 
     def sign_ecdsa(self, data: bytearray) -> typing.Tuple[pabtc.secp256k1.Fr, pabtc.secp256k1.Fr, int]:
+        # Sign a 32-byte data segment, returns the signature.
         assert len(data) == 32
         m = pabtc.secp256k1.Fr(int.from_bytes(data))
         for _ in itertools.repeat(0):
@@ -69,16 +74,19 @@ class PriKey:
         raise Exception
 
     def sign_ecdsa_der(self, data: bytearray) -> bytearray:
+        # Sign a 32-byte data segment, returns the signature in der format.
         r, s, _ = self.sign_ecdsa(data)
         return der_encode(r, s)
 
     def sign_schnorr(self, data: bytearray) -> bytearray:
+        # Sign a 32-byte data segment, returns the signature.
         assert len(data) == 32
         m = pabtc.secp256k1.Fr(int.from_bytes(data))
         r, s = pabtc.schnorr.sign(pabtc.secp256k1.Fr(self.n), m)
         return bytearray(r.x.x.to_bytes(32) + s.x.to_bytes(32))
 
     def wif(self) -> str:
+        # Convert the private key to wallet import format. This is the format supported by most third-party wallets.
         # See https://en.bitcoin.it/wiki/Wallet_import_format
         data = bytearray()
         data.append(pabtc.config.current.prefix.wif)
@@ -90,6 +98,7 @@ class PriKey:
 
     @classmethod
     def wif_decode(cls, data: str) -> typing.Self:
+        # Convert the wallet import format to private key. This is the format supported by most third-party wallets.
         data = pabtc.base58.decode(data)
         assert data[0] == pabtc.config.current.prefix.wif
         assert hash256(data[:-4])[:4] == data[-4:]
@@ -97,6 +106,8 @@ class PriKey:
 
 
 class PubKey:
+    # Bitcoin public key is created via elliptic curve multiplication.
+
     def __init__(self, x: int, y: int) -> None:
         # The public key must be on the curve.
         _ = pabtc.secp256k1.Pt(pabtc.secp256k1.Fq(x), pabtc.secp256k1.Fq(y))
@@ -113,19 +124,23 @@ class PubKey:
         ])
 
     def json(self) -> typing.Dict:
+        # Convert the public key to json representation.
         return {
             'x': f'0x{self.x:064x}',
             'y': f'0x{self.y:064x}'
         }
 
     def pt(self) -> pabtc.secp256k1.Pt:
+        # Convert the public key to secp256k1 point.
         return pabtc.secp256k1.Pt(pabtc.secp256k1.Fq(self.x), pabtc.secp256k1.Fq(self.y))
 
     @classmethod
     def pt_decode(cls, data: pabtc.secp256k1.Pt) -> typing.Self:
+        # Convert the secp256k1 point to public key.
         return PubKey(data.x.x, data.y.x)
 
     def sec(self) -> bytearray:
+        # Convert the public key to standards for efficient cryptography representation.
         r = bytearray()
         if self.y & 1 == 0:
             r.append(0x02)
@@ -136,6 +151,7 @@ class PubKey:
 
     @classmethod
     def sec_decode(cls, data: bytearray) -> typing.Self:
+        # Convert the standards for efficient cryptography representation to public key.
         p = data[0]
         assert p in [0x02, 0x03, 0x04]
         x = int.from_bytes(data[1:33])
