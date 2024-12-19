@@ -100,6 +100,7 @@ class PriKey:
         data = bytearray()
         data.append(pabtc.config.current.prefix.wif)
         data.extend(self.n.to_bytes(32))
+        # Also add a 0x01 byte at the end if the private key will correspond to a compressed public key.
         data.append(0x01)
         checksum = hash256(data)[:4]
         data.extend(checksum)
